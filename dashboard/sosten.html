@@ -321,6 +321,13 @@ dialog::backdrop{background:rgba(20,27,29,.45)}
 const SNAPSHOT = /*__SNAPSHOT__*/null;
 
 const DIA = 86400000;
+// Fuente por defecto cuando el archivo no trae datos embebidos (versión /app).
+// La clave anon es pública por diseño: la seguridad la dan las políticas RLS (db/04_supabase.sql).
+const FUENTE_DEFECTO = {
+  modo: 'supabase',
+  url: 'https://puiswvaxtjolaaxrolva.supabase.co',
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1aXN3dmF4dGpvbGFheHJvbHZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxMzQ5NDgsImV4cCI6MjEwNTcxMDk0OH0.CRMbnifSsFsEVpM3FCuj9G51bBEdp2KrG_kqkU-fwQs'
+};
 const LS_KEY = 'sosten_fuente_v1';
 let D = null;            // datos en uso (mismas claves que las vistas SQL)
 let FUENTE = {modo:'demo', url:'', key:''};
@@ -855,7 +862,8 @@ $('formFuente').addEventListener('submit', async e=>{
 });
 
 /* ---------- arranque ---------- */
-try{ const f = JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(f && f.modo) FUENTE = f; }catch(_){}
+if(!SNAPSHOT) FUENTE = {...FUENTE_DEFECTO};
+try{ const f = JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(f && f.modo && !(f.modo==='demo' && !SNAPSHOT)) FUENTE = f; }catch(_){}
 let rsz; addEventListener('resize',()=>{ clearTimeout(rsz); rsz=setTimeout(()=>D&&(renderRunway(),renderRutas()),150); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{ if(D){ simChart?.destroy(); simChart=null; render(); } });
 cargar();

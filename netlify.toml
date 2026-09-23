@@ -1,0 +1,21 @@
+# Netlify: publica solo la carpeta del dashboard (no expone SQL ni Python)
+[build]
+  publish = "dashboard"
+
+# Raíz del sitio → demo con el escenario incluido
+[[redirects]]
+  from = "/"
+  to = "/sosten_demo.html"
+  status = 200
+
+# /app → versión sin datos embebidos, para conectar Supabase o la API
+[[redirects]]
+  from = "/app"
+  to = "/sosten.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

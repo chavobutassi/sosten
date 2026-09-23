@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SOSTÉN · Monitor de sostenimiento de operaciones de campo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --paper:#EEF1EC; --panel:#FFFFFF; --line:#D3D9D1; --line-soft:#E3E8E1;
+  --ink:#1D2A2F; --ink-2:#4B5A5F; --ink-3:#7A878B;
+  --petrol:#1F5A64; --petrol-soft:#DCE8E9;
+  --sand:#C08A3E;
+  --crit:#B42318; --low:#D2651A; --watch:#A8850C; --ok:#2F7A55;
+  --crit-bg:#F7E1DE; --low-bg:#FBE8DA; --watch-bg:#F6EFD2; --ok-bg:#DFEFE6;
+  --font:'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r:6px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#141B1D; --panel:#1B2427; --line:#2E3A3E; --line-soft:#253034;
+    --ink:#E6ECEA; --ink-2:#B3BFBD; --ink-3:#83918F;
+    --petrol:#6FB3BD; --petrol-soft:#1F3439; --sand:#D6A45C;
+    --crit:#F0705F; --low:#F2994A; --watch:#E3C24F; --ok:#5DBB8A;
+    --crit-bg:#3A1E1B; --low-bg:#3A2819; --watch-bg:#353018; --ok-bg:#18322A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141B1D; --panel:#1B2427; --line:#2E3A3E; --line-soft:#253034;
+  --ink:#E6ECEA; --ink-2:#B3BFBD; --ink-3:#83918F;
+  --petrol:#6FB3BD; --petrol-soft:#1F3439; --sand:#D6A45C;
+  --crit:#F0705F; --low:#F2994A; --watch:#E3C24F; --ok:#5DBB8A;
+  --crit-bg:#3A1E1B; --low-bg:#3A2819; --watch-bg:#353018; --ok-bg:#18322A;
+  color-scheme: dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px);}
+*,*::before,*::after{box-sizing:inherit;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums;}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--petrol);outline-offset:2px;border-radius:3px}
+
+/* ── barra superior ── */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:1px solid var(--line);}
+.top-in{max-width:1240px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.brand{font-weight:800;font-stretch:125%;font-size:20px;letter-spacing:.01em}
+.brand small{font-weight:500;font-stretch:100%;font-size:13px;color:var(--ink-3);margin-left:8px;letter-spacing:0}
+.nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav a{color:var(--ink-2);text-decoration:none;padding:4px 10px;border-radius:999px;font-size:14px}
+.nav a:hover{background:var(--line-soft);color:var(--ink)}
+.top .grow{flex:1}
+@media (max-width:700px){.nav{display:none}.brand small{display:none}.top-in{gap:10px}.src{display:none}}
+.src{font-size:13px;color:var(--ink-3)}
+.btn{border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:var(--r);cursor:pointer;font-size:14px;font-weight:500}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--petrol);border-color:var(--petrol);color:#fff}
+[data-theme="dark"] .btn.primary{color:#0F1A1C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#0F1A1C}}
+
+main{max-width:1240px;margin:0 auto;padding:0 20px 60px}
+section{padding-top:36px}
+h2{font-size:22px;font-weight:700;font-stretch:112%;margin-bottom:4px}
+.lead{color:var(--ink-2);max-width:72ch;margin-bottom:16px}
+
+/* ── titular ── */
+.hero{padding-top:30px}
+.hero h1{font-weight:800;font-stretch:118%;font-size:clamp(26px,4.2vw,44px);line-height:1.08;max-width:22ch;letter-spacing:-.005em}
+.hero .sub{margin-top:10px;color:var(--ink-2);font-size:17px;max-width:70ch}
+
+/* ── pista de autonomía ── */
+.runway{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 0 4px}
+.runway svg{display:block;width:100%;height:auto}
+.rw-row{cursor:pointer}
+.rw-row:hover .rw-bg,.rw-row:focus .rw-bg{fill:var(--line-soft)}
+.rw-row.sel .rw-bg{fill:var(--petrol-soft)}
+.rw-row:focus{outline:none}
+.rw-note{font-size:13px;color:var(--ink-3);padding:4px 16px 8px}
+
+/* ── dos columnas ── */
+.cols{display:grid;grid-template-columns:1.25fr 1fr;gap:28px}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+.list{list-style:none;border-top:1px solid var(--line)}
+.list li{padding:11px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.p-crit{background:var(--crit-bg);color:var(--crit)} .p-low{background:var(--low-bg);color:var(--low)}
+.p-watch{background:var(--watch-bg);color:var(--watch)} .p-ok{background:var(--ok-bg);color:var(--ok)}
+.p-neutral{background:var(--line-soft);color:var(--ink-2)}
+.meta{font-size:13px;color:var(--ink-3)}
+.num-badge{font-weight:800;font-stretch:118%;font-size:18px;color:var(--petrol);min-width:1.4em;text-align:right}
+.empty{padding:14px 0;color:var(--ink-3)}
+
+/* ── simulador ── */
+.sim{display:grid;grid-template-columns:320px 1fr;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+@media (max-width:900px){.sim{grid-template-columns:1fr}}
+.sim-ctrl{padding:18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:18px}
+@media (max-width:900px){.sim-ctrl{border-right:none;border-bottom:1px solid var(--line)}}
+.sim-ctrl label{display:block;font-size:14px;font-weight:600}
+.sim-ctrl .val{float:right;font-weight:700;color:var(--petrol)}
+.sim-ctrl input[type=range]{width:100%;accent-color:var(--petrol);margin-top:6px}
+.sim-ctrl .hint{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-top:6px}
+.seg button{flex:1;border:none;background:transparent;padding:6px 8px;cursor:pointer;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--petrol);color:#fff}
+[data-theme="dark"] .seg button[aria-pressed="true"]{color:#0F1A1C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{color:#0F1A1C}}
+.sim-out{padding:18px;min-width:0}
+.sim-out h3{font-size:17px;font-weight:700;font-stretch:108%}
+.sim-verdict{margin:6px 0 14px;color:var(--ink-2)}
+.chart-box{position:relative;height:300px}
+.sim-table{width:100%;border-collapse:collapse;margin-top:14px;font-size:14px}
+.sim-table th{font-weight:600;color:var(--ink-3);text-align:left;font-size:12.5px;padding:4px 8px 4px 0;border-bottom:1px solid var(--line)}
+.sim-table td{padding:6px 8px 6px 0;border-bottom:1px solid var(--line-soft)}
+.sim-table td.n,.sim-table th.n{text-align:right}
+select.frente-sel{border:1px solid var(--line);background:var(--panel);border-radius:var(--r);padding:6px 8px;width:100%;margin-top:6px}
+
+/* ── tablas genéricas ── */
+.tbl-wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+table.t{width:100%;border-collapse:collapse;font-size:14px;min-width:620px}
+table.t th{text-align:left;font-weight:600;font-size:12.5px;color:var(--ink-3);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t td{padding:9px 12px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+table.t tr:last-child td{border-bottom:none}
+table.t .n{text-align:right}
+.bar{height:8px;background:var(--line-soft);border-radius:999px;overflow:hidden;min-width:80px}
+.bar i{display:block;height:100%;border-radius:999px}
+
+/* ── mapa ── */
+.map-wrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.map-wrap svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink-2);padding:10px 14px;border-top:1px solid var(--line)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:22px;height:0;border-top:3px solid}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+
+footer{max-width:1240px;margin:0 auto;padding:24px 20px 40px;color:var(--ink-3);font-size:13px;border-top:1px solid var(--line)}
+
+/* ── diálogos ── */
+dialog{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);color:var(--ink);padding:0;width:min(460px,92vw)}
+dialog::backdrop{background:rgba(20,27,29,.45)}
+.dlg{padding:20px;display:flex;flex-direction:column;gap:14px}
+.dlg h3{font-size:18px;font-weight:700;font-stretch:108%}
+.dlg label{font-size:13.5px;font-weight:600;display:flex;flex-direction:column;gap:4px}
+.dlg input,.dlg select{border:1px solid var(--line);background:var(--paper);border-radius:var(--r);padding:7px 9px;font-weight:400}
+.dlg .row{display:flex;gap:10px;justify-content:flex-end}
+.dlg .radio{flex-direction:row;align-items:center;gap:8px;font-weight:500}
+.dlg .msg{font-size:13.5px;color:var(--crit)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:var(--r);font-size:14px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">SOSTÉN<small>Operación Loma Alta</small></div>
+    <nav class="nav" aria-label="Secciones">
+      <a href="#hoy">Hoy</a><a href="#simulador">Simulador</a><a href="#reposicion">Reposición</a>
+      <a href="#rutas">Rutas</a><a href="#flota">Flota</a><a href="#viajes">Viajes</a>
+    </nav>
+    <div class="grow"></div>
+    <span class="src" id="srcLabel">Cargando datos…</span>
+    <button class="btn" id="btnFuente" type="button">Fuente de datos</button>
+    <button class="btn primary" id="btnParte" type="button">Cargar parte</button>
+  </div>
+</header>
+
+<main>
+  <section class="hero" id="hoy">
+    <h1 id="heroTitle">Cargando situación…</h1>
+    <p class="sub" id="heroSub"></p>
+    <div class="runway" id="runway" aria-label="Días de cobertura por frente e insumo"></div>
+  </section>
+
+  <section>
+    <div class="cols">
+      <div>
+        <h2>Qué hacer ahora</h2>
+        <p class="lead">Acciones que surgen de cruzar stock, consumo, flota y rutas.</p>
+        <ul class="list" id="acciones"></ul>
+      </div>
+      <div>
+        <h2>Alertas activas</h2>
+        <p class="lead">Generadas automáticamente por la base al cruzar un umbral.</p>
+        <ul class="list" id="alertas"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="simulador">
+    <h2>Simulador de reposición</h2>
+    <p class="lead">La autonomía supone que no llega nada más. Acá se proyecta el stock con la flota trabajando: ajustá etapas, camiones y ruta para ver si el frente llega.</p>
+    <div class="sim">
+      <div class="sim-ctrl">
+        <div>
+          <label for="simFrente">Frente</label>
+          <select id="simFrente" class="frente-sel"></select>
+        </div>
+        <div id="ctrlEtapas">
+          <label for="simEtapas">Etapas de fractura por día <span class="val" id="simEtapasV"></span></label>
+          <input type="range" id="simEtapas" min="0" max="12" step="1">
+          <div class="hint" id="simEtapasH"></div>
+        </div>
+        <div id="ctrlCamiones">
+          <label for="simCamiones">Camiones areneros operativos <span class="val" id="simCamionesV"></span></label>
+          <input type="range" id="simCamiones" min="0" step="1">
+          <div class="hint" id="simCamionesH"></div>
+        </div>
+        <div id="ctrlRuta">
+          <span style="font-size:14px;font-weight:600">Ruta de abastecimiento</span>
+          <div class="seg" role="group" aria-label="Ruta de abastecimiento">
+            <button type="button" id="rutaPrin" aria-pressed="false">Principal</button>
+            <button type="button" id="rutaAlt" aria-pressed="false">Variante</button>
+          </div>
+          <div class="hint" id="simRutaH"></div>
+        </div>
+        <div>
+          <label for="simGasoil">Despacho urgente de gasoil <span class="val" id="simGasoilV"></span></label>
+          <input type="range" id="simGasoil" min="0" max="120" step="10" value="0">
+          <div class="hint">Llega al frente después del tiempo de tránsito de la ruta elegida.</div>
+        </div>
+      </div>
+      <div class="sim-out">
+        <h3 id="simTitle"></h3>
+        <p class="sim-verdict" id="simVerdict"></p>
+        <div class="chart-box"><canvas id="simChart" aria-label="Proyección de stock a 5 días"></canvas></div>
+        <table class="sim-table" id="simTable"></table>
+      </div>
+    </div>
+  </section>
+
+  <section id="reposicion">
+    <h2>¿La flota alcanza a reponer lo que se consume?</h2>
+    <p class="lead">Capacidad diaria de la flota operativa sobre el consumo real. Por debajo de 100 % el stock baja aunque los camiones no paren.</p>
+    <div class="tbl-wrap"><table class="t" id="tblRepo"></table></div>
+  </section>
+
+  <section id="rutas">
+    <h2>Rutas y clima de hoy</h2>
+    <p class="lead">Riesgo efectivo = riesgo base del camino + viento + lluvia sobre ripio o tierra.</p>
+    <div class="grid2">
+      <div class="map-wrap"><div id="mapa"></div>
+        <div class="legend">
+          <span><i style="border-color:var(--ok)"></i>Normal</span>
+          <span><i style="border-color:var(--watch)"></i>Con restricción</span>
+          <span><i style="border-color:var(--low)"></i>Recomendar cierre</span>
+          <span><i style="border-color:var(--crit);border-top-style:dashed"></i>Cerrada</span>
+        </div>
+      </div>
+      <div class="tbl-wrap"><table class="t" id="tblRutas" style="min-width:520px"></table></div>
+    </div>
+  </section>
+
+  <section id="flota">
+    <h2>Disponibilidad de flota</h2>
+    <p class="lead">Equipos operativos sobre el total asignado a cada frente.</p>
+    <div class="tbl-wrap"><table class="t" id="tblFlota"></table></div>
+  </section>
+
+  <section id="viajes">
+    <h2>Viajes</h2>
+    <p class="lead">Cumplimiento de la última semana por ruta y movimientos en curso.</p>
+    <div class="grid2">
+      <div class="tbl-wrap"><table class="t" id="tblViajesKpi" style="min-width:480px"></table></div>
+      <div class="tbl-wrap"><table class="t" id="tblViajes" style="min-width:480px"></table></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  SOSTÉN es un proyecto de portfolio de Claudio J. Butassi. Operadora, bloques y volúmenes son ficticios; los órdenes de magnitud se calibran con los datos públicos de fractura de la Secretaría de Energía (Adjunto IV). Modelo en PostgreSQL con vistas y triggers, API en FastAPI.
+</footer>
+
+<!-- Fuente de datos -->
+<dialog id="dlgFuente">
+  <form class="dlg" method="dialog" id="formFuente">
+    <h3>Fuente de datos</h3>
+    <label class="radio"><input type="radio" name="modo" value="demo" checked> Escenario de demostración incluido</label>
+    <label class="radio"><input type="radio" name="modo" value="api"> API SOSTÉN (FastAPI)</label>
+    <label class="radio"><input type="radio" name="modo" value="supabase"> Supabase</label>
+    <label id="fUrlL">URL <input type="url" id="fUrl" placeholder="https://…"></label>
+    <label id="fKeyL">Clave anon de Supabase <input type="text" id="fKey" autocomplete="off"></label>
+    <p class="meta">Para conectar tu base, abrí este archivo desde tu propio hosting (Vercel, Netlify). La versión publicada en claude.ai solo muestra el escenario de demostración.</p>
+    <p class="msg" id="fMsg"></p>
+    <div class="row">
+      <button class="btn" value="cancel" type="button" id="fCancel">Cancelar</button>
+      <button class="btn primary" type="submit" id="fOk">Conectar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Parte de consumo -->
+<dialog id="dlgParte">
+  <form class="dlg" method="dialog" id="formParte">
+    <h3>Cargar parte de consumo</h3>
+    <label>Frente <select id="pFrente" required></select></label>
+    <label>Insumo <select id="pInsumo" required></select></label>
+    <label><span>Cantidad consumida <span id="pUnidad" class="meta"></span></span><input type="number" id="pCant" min="0.1" step="0.1" required></label>
+    <label>Reportado por <input type="text" id="pPor" placeholder="Supervisor de turno"></label>
+    <p class="msg" id="pMsg"></p>
+    <div class="row">
+      <button class="btn" type="button" id="pCancel">Cancelar</button>
+      <button class="btn primary" type="submit">Registrar parte</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* =====================================================================
+   SNAPSHOT DEL ESCENARIO (generado con api/exportar_snapshot.py)
+   ===================================================================== */
+const SNAPSHOT = {"frentes":[{"id_frente":"BASE-ANE","nombre":"Base logística Añelo","tipo":"Base logística","bloque":null,"lat":-38.354,"lon":-68.788,"dotacion":60,"etapas_plan_dia":null,"base_apoyo":null,"estado":"Activo","actualizado_en":"2026-09-23T03:58:43.084002+00:00"},{"id_frente":"CAMP-01","nombre":"Campamento Loma Alta","tipo":"Campamento","bloque":"Loma Alta","lat":-38.215,"lon":-69.125,"dotacion":140,"etapas_plan_dia":null,"base_apoyo":"BASE-ANE","estado":"Activo","actualizado_en":"2026-09-23T03:58:43.084002+00:00"},{"id_frente":"FS-01","nombre":"Set de fractura 1 · Loma Alta","tipo":"Set de fractura","bloque":"Loma Alta","lat":-38.045,"lon":-69.312,"dotacion":85,"etapas_plan_dia":9.0,"base_apoyo":"BASE-ANE","estado":"Activo","actualizado_en":"2026-09-23T03:58:43.084002+00:00"},{"id_frente":"FS-02","nombre":"Set de fractura 2 · Cerro Negro","tipo":"Set de fractura","bloque":"Cerro Negro","lat":-38.512,"lon":-69.438,"dotacion":80,"etapas_plan_dia":8.0,"base_apoyo":"BASE-ANE","estado":"Activo","actualizado_en":"2026-09-23T03:58:43.084002+00:00"},{"id_frente":"PE-01","nombre":"Equipo de perforación 1 · Bajada Sur","tipo":"Equipo de perforación","bloque":"Bajada Sur","lat":-38.743,"lon":-68.99,"dotacion":45,"etapas_plan_dia":null,"base_apoyo":"BASE-ANE","estado":"Activo","actualizado_en":"2026-09-23T03:58:43.084002+00:00"}],"v_autonomia":[{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","tipo_frente":"Set de fractura","id_insumo":"GASOIL","insumo":"Gasoil","categoria":"Combustible","unidad":"m³","critico":true,"cantidad_actual":70.0,"umbral_critico":75.0,"stock_minimo":150.0,"stock_objetivo":300.0,"consumo_real_dia":80.83,"consumo_plan_dia":72.0,"dias_autonomia":0.87,"dias_autonomia_plan":0.97,"desvio_plan_pct":12.3,"pct_objetivo":23.3,"fecha_quiebre":"2026-09-23","semaforo":"Crítico"},{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","tipo_frente":"Set de fractura","id_insumo":"ARENA","insumo":"Arena de fractura","categoria":"Agente de sostén","unidad":"t","critico":true,"cantidad_actual":3800.0,"umbral_critico":2250.0,"stock_minimo":4500.0,"stock_objetivo":9000.0,"consumo_real_dia":2413.71,"consumo_plan_dia":2250.0,"dias_autonomia":1.57,"dias_autonomia_plan":1.69,"desvio_plan_pct":7.3,"pct_objetivo":42.2,"fecha_quiebre":"2026-09-24","semaforo":"Bajo"},{"id_frente":"CAMP-01","frente":"Campamento Loma Alta","tipo_frente":"Campamento","id_insumo":"AGUAP","insumo":"Agua potable","categoria":"Campamento","unidad":"m³","critico":false,"cantidad_actual":40.0,"umbral_critico":21.0,"stock_minimo":42.0,"stock_objetivo":105.0,"consumo_real_dia":23.1,"consumo_plan_dia":21.0,"dias_autonomia":1.73,"dias_autonomia_plan":1.9,"desvio_plan_pct":10.0,"pct_objetivo":38.1,"fecha_quiebre":"2026-09-24","semaforo":"Bajo"},{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","tipo_frente":"Set de fractura","id_insumo":"AGUA","insumo":"Agua de fractura","categoria":"Agua","unidad":"m³","critico":true,"cantidad_actual":31500.0,"umbral_critico":11000.0,"stock_minimo":22000.0,"stock_objetivo":45000.0,"consumo_real_dia":10479.1,"consumo_plan_dia":10800.0,"dias_autonomia":3.01,"dias_autonomia_plan":2.92,"desvio_plan_pct":-3.0,"pct_objetivo":70.0,"fecha_quiebre":"2026-09-26","semaforo":"Normal"},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","tipo_frente":"Set de fractura","id_insumo":"ARENA","insumo":"Arena de fractura","categoria":"Agente de sostén","unidad":"t","critico":true,"cantidad_actual":7400.0,"umbral_critico":2000.0,"stock_minimo":4000.0,"stock_objetivo":8000.0,"consumo_real_dia":2045.51,"consumo_plan_dia":2000.0,"dias_autonomia":3.62,"dias_autonomia_plan":3.7,"desvio_plan_pct":2.3,"pct_objetivo":92.5,"fecha_quiebre":"2026-09-26","semaforo":"Normal"},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","tipo_frente":"Set de fractura","id_insumo":"GASOIL","insumo":"Gasoil","categoria":"Combustible","unidad":"m³","critico":true,"cantidad_actual":235.0,"umbral_critico":65.0,"stock_minimo":130.0,"stock_objetivo":260.0,"consumo_real_dia":64.17,"consumo_plan_dia":64.0,"dias_autonomia":3.66,"dias_autonomia_plan":3.67,"desvio_plan_pct":0.3,"pct_objetivo":90.4,"fecha_quiebre":"2026-09-26","semaforo":"Normal"},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","tipo_frente":"Set de fractura","id_insumo":"AGUA","insumo":"Agua de fractura","categoria":"Agua","unidad":"m³","critico":true,"cantidad_actual":38500.0,"umbral_critico":10000.0,"stock_minimo":20000.0,"stock_objetivo":40000.0,"consumo_real_dia":9602.74,"consumo_plan_dia":9600.0,"dias_autonomia":4.01,"dias_autonomia_plan":4.01,"desvio_plan_pct":0.0,"pct_objetivo":96.3,"fecha_quiebre":"2026-09-27","semaforo":"Normal"},{"id_frente":"PE-01","frente":"Equipo de perforación 1 · Bajada Sur","tipo_frente":"Equipo de perforación","id_insumo":"GASOIL","insumo":"Gasoil","categoria":"Combustible","unidad":"m³","critico":true,"cantidad_actual":38.0,"umbral_critico":9.0,"stock_minimo":18.0,"stock_objetivo":45.0,"consumo_real_dia":9.01,"consumo_plan_dia":9.0,"dias_autonomia":4.22,"dias_autonomia_plan":4.22,"desvio_plan_pct":0.1,"pct_objetivo":84.4,"fecha_quiebre":"2026-09-27","semaforo":"Normal"},{"id_frente":"CAMP-01","frente":"Campamento Loma Alta","tipo_frente":"Campamento","id_insumo":"VIANDA","insumo":"Viandas","categoria":"Campamento","unidad":"raciones","critico":false,"cantidad_actual":1900.0,"umbral_critico":420.0,"stock_minimo":840.0,"stock_objetivo":2520.0,"consumo_real_dia":418.96,"consumo_plan_dia":420.0,"dias_autonomia":4.54,"dias_autonomia_plan":4.52,"desvio_plan_pct":-0.2,"pct_objetivo":75.4,"fecha_quiebre":"2026-09-27","semaforo":"Normal"},{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","tipo_frente":"Set de fractura","id_insumo":"QUIM","insumo":"Aditivos químicos","categoria":"Químicos","unidad":"m³","critico":true,"cantidad_actual":205.0,"umbral_critico":45.0,"stock_minimo":90.0,"stock_objetivo":220.0,"consumo_real_dia":45.0,"consumo_plan_dia":45.0,"dias_autonomia":4.56,"dias_autonomia_plan":4.56,"desvio_plan_pct":0.0,"pct_objetivo":93.2,"fecha_quiebre":"2026-09-27","semaforo":"Normal"},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","tipo_frente":"Set de fractura","id_insumo":"QUIM","insumo":"Aditivos químicos","categoria":"Químicos","unidad":"m³","critico":true,"cantidad_actual":185.0,"umbral_critico":40.0,"stock_minimo":80.0,"stock_objetivo":200.0,"consumo_real_dia":40.01,"consumo_plan_dia":40.0,"dias_autonomia":4.62,"dias_autonomia_plan":4.63,"desvio_plan_pct":0.0,"pct_objetivo":92.5,"fecha_quiebre":"2026-09-27","semaforo":"Normal"},{"id_frente":"PE-01","frente":"Equipo de perforación 1 · Bajada Sur","tipo_frente":"Equipo de perforación","id_insumo":"AGUA","insumo":"Agua de fractura","categoria":"Agua","unidad":"m³","critico":true,"cantidad_actual":290.0,"umbral_critico":60.0,"stock_minimo":120.0,"stock_objetivo":360.0,"consumo_real_dia":60.01,"consumo_plan_dia":60.0,"dias_autonomia":4.83,"dias_autonomia_plan":4.83,"desvio_plan_pct":0.0,"pct_objetivo":80.6,"fecha_quiebre":"2026-09-27","semaforo":"Normal"},{"id_frente":"CAMP-01","frente":"Campamento Loma Alta","tipo_frente":"Campamento","id_insumo":"GASOIL","insumo":"Gasoil","categoria":"Combustible","unidad":"m³","critico":true,"cantidad_actual":31.0,"umbral_critico":6.0,"stock_minimo":12.0,"stock_objetivo":36.0,"consumo_real_dia":5.97,"consumo_plan_dia":6.0,"dias_autonomia":5.19,"dias_autonomia_plan":5.17,"desvio_plan_pct":-0.5,"pct_objetivo":86.1,"fecha_quiebre":"2026-09-28","semaforo":"Normal"},{"id_frente":"BASE-ANE","frente":"Base logística Añelo","tipo_frente":"Base logística","id_insumo":"QUIM","insumo":"Aditivos químicos","categoria":"Químicos","unidad":"m³","critico":true,"cantidad_actual":310.0,"umbral_critico":80.0,"stock_minimo":150.0,"stock_objetivo":400.0,"consumo_real_dia":null,"consumo_plan_dia":null,"dias_autonomia":null,"dias_autonomia_plan":null,"desvio_plan_pct":null,"pct_objetivo":77.5,"fecha_quiebre":null,"semaforo":"Normal"},{"id_frente":"BASE-ANE","frente":"Base logística Añelo","tipo_frente":"Base logística","id_insumo":"GASOIL","insumo":"Gasoil","categoria":"Combustible","unidad":"m³","critico":true,"cantidad_actual":520.0,"umbral_critico":150.0,"stock_minimo":300.0,"stock_objetivo":800.0,"consumo_real_dia":null,"consumo_plan_dia":null,"dias_autonomia":null,"dias_autonomia_plan":null,"desvio_plan_pct":null,"pct_objetivo":65.0,"fecha_quiebre":null,"semaforo":"Normal"},{"id_frente":"BASE-ANE","frente":"Base logística Añelo","tipo_frente":"Base logística","id_insumo":"ARENA","insumo":"Arena de fractura","categoria":"Agente de sostén","unidad":"t","critico":true,"cantidad_actual":11200.0,"umbral_critico":6000.0,"stock_minimo":12000.0,"stock_objetivo":30000.0,"consumo_real_dia":null,"consumo_plan_dia":null,"dias_autonomia":null,"dias_autonomia_plan":null,"desvio_plan_pct":null,"pct_objetivo":37.3,"fecha_quiebre":null,"semaforo":"Bajo"}],"v_indice_sostenimiento":[{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","tipo_frente":"Set de fractura","indice":0.572,"estado":"Aceptable","dias_autonomia_min":0.87,"insumo_limitante":"Gasoil","insumos_en_riesgo":2},{"id_frente":"CAMP-01","frente":"Campamento Loma Alta","tipo_frente":"Campamento","indice":0.665,"estado":"Aceptable","dias_autonomia_min":1.73,"insumo_limitante":"Agua potable","insumos_en_riesgo":1},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","tipo_frente":"Set de fractura","indice":0.929,"estado":"Óptimo","dias_autonomia_min":3.62,"insumo_limitante":"Arena de fractura","insumos_en_riesgo":0},{"id_frente":"PE-01","frente":"Equipo de perforación 1 · Bajada Sur","tipo_frente":"Equipo de perforación","indice":0.825,"estado":"Óptimo","dias_autonomia_min":4.22,"insumo_limitante":"Gasoil","insumos_en_riesgo":0},{"id_frente":"BASE-ANE","frente":"Base logística Añelo","tipo_frente":"Base logística","indice":0.599,"estado":"Aceptable","dias_autonomia_min":null,"insumo_limitante":null,"insumos_en_riesgo":1}],"v_balance_reposicion":[{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","id_insumo":"ARENA","insumo":"Arena de fractura","unidad":"t","demanda_dia":2413.71,"cap_operativa_dia":2070.0,"cap_nominal_dia":2340.0,"equipos_no_disp":3,"cobertura_pct":85.8,"balance_dia":-343.71},{"id_frente":"PE-01","frente":"Equipo de perforación 1 · Bajada Sur","id_insumo":"AGUA","insumo":"Agua de fractura","unidad":"m³","demanda_dia":60.01,"cap_operativa_dia":60.0,"cap_nominal_dia":60.0,"equipos_no_disp":0,"cobertura_pct":100.0,"balance_dia":-0.01},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","id_insumo":"AGUA","insumo":"Agua de fractura","unidad":"m³","demanda_dia":9602.74,"cap_operativa_dia":10000.0,"cap_nominal_dia":10000.0,"equipos_no_disp":0,"cobertura_pct":104.1,"balance_dia":397.26},{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","id_insumo":"AGUA","insumo":"Agua de fractura","unidad":"m³","demanda_dia":10479.1,"cap_operativa_dia":11000.0,"cap_nominal_dia":11000.0,"equipos_no_disp":0,"cobertura_pct":105.0,"balance_dia":520.9},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","id_insumo":"ARENA","insumo":"Arena de fractura","unidad":"t","demanda_dia":2045.51,"cap_operativa_dia":2208.0,"cap_nominal_dia":2304.0,"equipos_no_disp":1,"cobertura_pct":107.9,"balance_dia":162.49},{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","id_insumo":"QUIM","insumo":"Aditivos químicos","unidad":"m³","demanda_dia":45.0,"cap_operativa_dia":50.0,"cap_nominal_dia":50.0,"equipos_no_disp":0,"cobertura_pct":111.1,"balance_dia":5.0},{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","id_insumo":"GASOIL","insumo":"Gasoil","unidad":"m³","demanda_dia":80.83,"cap_operativa_dia":90.0,"cap_nominal_dia":135.0,"equipos_no_disp":1,"cobertura_pct":111.3,"balance_dia":9.17},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","id_insumo":"QUIM","insumo":"Aditivos químicos","unidad":"m³","demanda_dia":40.01,"cap_operativa_dia":50.0,"cap_nominal_dia":50.0,"equipos_no_disp":0,"cobertura_pct":125.0,"balance_dia":9.99},{"id_frente":"CAMP-01","frente":"Campamento Loma Alta","id_insumo":"AGUAP","insumo":"Agua potable","unidad":"m³","demanda_dia":23.1,"cap_operativa_dia":30.0,"cap_nominal_dia":30.0,"equipos_no_disp":0,"cobertura_pct":129.9,"balance_dia":6.9},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","id_insumo":"GASOIL","insumo":"Gasoil","unidad":"m³","demanda_dia":64.17,"cap_operativa_dia":96.0,"cap_nominal_dia":96.0,"equipos_no_disp":0,"cobertura_pct":149.6,"balance_dia":31.83},{"id_frente":"CAMP-01","frente":"Campamento Loma Alta","id_insumo":"GASOIL","insumo":"Gasoil","unidad":"m³","demanda_dia":5.97,"cap_operativa_dia":10.0,"cap_nominal_dia":10.0,"equipos_no_disp":0,"cobertura_pct":167.5,"balance_dia":4.03},{"id_frente":"PE-01","frente":"Equipo de perforación 1 · Bajada Sur","id_insumo":"GASOIL","insumo":"Gasoil","unidad":"m³","demanda_dia":9.01,"cap_operativa_dia":20.0,"cap_nominal_dia":20.0,"equipos_no_disp":0,"cobertura_pct":222.0,"balance_dia":10.99},{"id_frente":"CAMP-01","frente":"Campamento Loma Alta","id_insumo":"VIANDA","insumo":"Viandas","unidad":"raciones","demanda_dia":418.96,"cap_operativa_dia":1000.0,"cap_nominal_dia":1000.0,"equipos_no_disp":0,"cobertura_pct":238.7,"balance_dia":581.04}],"v_disponibilidad_flota":[{"id_frente":"CAMP-01","frente":"Campamento Loma Alta","tipo":"Camión de viandas","total":2,"operativos":2,"en_mantenimiento":0,"fuera_servicio":0,"disponibilidad_pct":100.0},{"id_frente":"CAMP-01","frente":"Campamento Loma Alta","tipo":"Cisterna de agua potable","total":1,"operativos":1,"en_mantenimiento":0,"fuera_servicio":0,"disponibilidad_pct":100.0},{"id_frente":"CAMP-01","frente":"Campamento Loma Alta","tipo":"Cisterna de gasoil","total":1,"operativos":1,"en_mantenimiento":0,"fuera_servicio":0,"disponibilidad_pct":100.0},{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","tipo":"Bomba de fractura","total":14,"operativos":13,"en_mantenimiento":1,"fuera_servicio":0,"disponibilidad_pct":92.9},{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","tipo":"Bombeo de acueducto","total":1,"operativos":1,"en_mantenimiento":0,"fuera_servicio":0,"disponibilidad_pct":100.0},{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","tipo":"Camión arenero","total":26,"operativos":23,"en_mantenimiento":1,"fuera_servicio":2,"disponibilidad_pct":88.5},{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","tipo":"Camión de químicos","total":1,"operativos":1,"en_mantenimiento":0,"fuera_servicio":0,"disponibilidad_pct":100.0},{"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","tipo":"Cisterna de gasoil","total":3,"operativos":2,"en_mantenimiento":1,"fuera_servicio":0,"disponibilidad_pct":66.7},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","tipo":"Bomba de fractura","total":12,"operativos":12,"en_mantenimiento":0,"fuera_servicio":0,"disponibilidad_pct":100.0},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","tipo":"Bombeo de acueducto","total":1,"operativos":1,"en_mantenimiento":0,"fuera_servicio":0,"disponibilidad_pct":100.0},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","tipo":"Camión arenero","total":24,"operativos":23,"en_mantenimiento":1,"fuera_servicio":0,"disponibilidad_pct":95.8},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","tipo":"Camión de químicos","total":1,"operativos":1,"en_mantenimiento":0,"fuera_servicio":0,"disponibilidad_pct":100.0},{"id_frente":"FS-02","frente":"Set de fractura 2 · Cerro Negro","tipo":"Cisterna de gasoil","total":2,"operativos":2,"en_mantenimiento":0,"fuera_servicio":0,"disponibilidad_pct":100.0},{"id_frente":"PE-01","frente":"Equipo de perforación 1 · Bajada Sur","tipo":"Cisterna de agua","total":1,"operativos":1,"en_mantenimiento":0,"fuera_servicio":0,"disponibilidad_pct":100.0},{"id_frente":"PE-01","frente":"Equipo de perforación 1 · Bajada Sur","tipo":"Cisterna de gasoil","total":1,"operativos":1,"en_mantenimiento":0,"fuera_servicio":0,"disponibilidad_pct":100.0}],"v_rutas_estado":[{"id_ruta":"R-01","origen":"BASE-ANE","destino":"FS-01","nombre":"Camino principal Loma Alta","distancia_km":85.0,"superficie":"Mixta","tiempo_min":150,"riesgo_base":2,"es_principal":true,"zona_clima":"Loma Alta","estado":"Cerrada","viento_kmh":78.0,"lluvia_mm":12.0,"riesgo_efectivo":5,"condicion":"Cerrada"},{"id_ruta":"R-01B","origen":"BASE-ANE","destino":"FS-01","nombre":"Variante picada norte","distancia_km":118.0,"superficie":"Ripio","tiempo_min":205,"riesgo_base":3,"es_principal":false,"zona_clima":"Añelo norte","estado":"Habilitada","viento_kmh":44.0,"lluvia_mm":2.0,"riesgo_efectivo":3,"condicion":"Normal"},{"id_ruta":"R-02","origen":"BASE-ANE","destino":"FS-02","nombre":"Ruta asfaltada Cerro Negro","distancia_km":72.0,"superficie":"Asfalto","tiempo_min":95,"riesgo_base":1,"es_principal":true,"zona_clima":"Añelo","estado":"Habilitada","viento_kmh":38.0,"lluvia_mm":1.0,"riesgo_efectivo":1,"condicion":"Normal"},{"id_ruta":"R-03","origen":"BASE-ANE","destino":"PE-01","nombre":"Camino Bajada Sur","distancia_km":64.0,"superficie":"Tierra","tiempo_min":120,"riesgo_base":2,"es_principal":true,"zona_clima":"Bajada Sur","estado":"Habilitada","viento_kmh":56.0,"lluvia_mm":4.0,"riesgo_efectivo":4,"condicion":"Circular con restricción"},{"id_ruta":"R-04","origen":"BASE-ANE","destino":"CAMP-01","nombre":"Acceso campamento Loma Alta","distancia_km":80.0,"superficie":"Mixta","tiempo_min":140,"riesgo_base":2,"es_principal":true,"zona_clima":"Loma Alta","estado":"Habilitada","viento_kmh":78.0,"lluvia_mm":12.0,"riesgo_efectivo":5,"condicion":"Recomendar cierre"},{"id_ruta":"R-04B","origen":"BASE-ANE","destino":"CAMP-01","nombre":"Variante picada norte (camp.)","distancia_km":112.0,"superficie":"Ripio","tiempo_min":195,"riesgo_base":3,"es_principal":false,"zona_clima":"Añelo norte","estado":"Habilitada","viento_kmh":44.0,"lluvia_mm":2.0,"riesgo_efectivo":3,"condicion":"Normal"}],"v_viajes_kpi":[{"id_ruta":"R-01","ruta":"Camino principal Loma Alta","destino":"FS-01","entregados":581,"en_curso":0,"cancelados":2,"a_tiempo_pct":80.2,"demora_media_min":14.0},{"id_ruta":"R-01B","ruta":"Variante picada norte","destino":"FS-01","entregados":0,"en_curso":3,"cancelados":0,"a_tiempo_pct":null,"demora_media_min":null},{"id_ruta":"R-02","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","entregados":532,"en_curso":1,"cancelados":0,"a_tiempo_pct":80.5,"demora_media_min":13.0},{"id_ruta":"R-03","ruta":"Camino Bajada Sur","destino":"PE-01","entregados":21,"en_curso":0,"cancelados":0,"a_tiempo_pct":85.7,"demora_media_min":11.0},{"id_ruta":"R-04","ruta":"Acceso campamento Loma Alta","destino":"CAMP-01","entregados":35,"en_curso":0,"cancelados":0,"a_tiempo_pct":85.7,"demora_media_min":11.0}],"v_alertas_activas":[{"id_alerta":3,"id_frente":"FS-01","tipo":"Stock crítico","severidad":"Crítica","descripcion":"Gasoil por debajo del umbral crítico en Set de fractura 1 · Loma Alta","id_insumo":"GASOIL","id_equipo":null,"id_ruta":null,"valor_actual":70.0,"umbral":75.0,"estado":"Activa","creada_en":"2026-09-23T03:58:43.084002+00:00","resuelta_en":null,"frente":"Set de fractura 1 · Loma Alta","orden":1},{"id_alerta":7,"id_frente":"FS-01","tipo":"Ruta cerrada","severidad":"Crítica","descripcion":"Camino principal Loma Alta: ruta cerrada","id_insumo":null,"id_equipo":null,"id_ruta":"R-01","valor_actual":null,"umbral":null,"estado":"Activa","creada_en":"2026-09-23T03:58:43.084002+00:00","resuelta_en":null,"frente":"Set de fractura 1 · Loma Alta","orden":1},{"id_alerta":4,"id_frente":"CAMP-01","tipo":"Stock bajo","severidad":"Alta","descripcion":"Agua potable por debajo del mínimo en Campamento Loma Alta","id_insumo":"AGUAP","id_equipo":null,"id_ruta":null,"valor_actual":40.0,"umbral":42.0,"estado":"Activa","creada_en":"2026-09-23T03:58:43.084002+00:00","resuelta_en":null,"frente":"Campamento Loma Alta","orden":2},{"id_alerta":5,"id_frente":"FS-01","tipo":"Equipo fuera de servicio","severidad":"Alta","descripcion":"Camión arenero ARE-007 fuera de servicio","id_insumo":"ARENA","id_equipo":"ARE-007","id_ruta":null,"valor_actual":null,"umbral":null,"estado":"Activa","creada_en":"2026-09-23T03:58:43.084002+00:00","resuelta_en":null,"frente":"Set de fractura 1 · Loma Alta","orden":2},{"id_alerta":6,"id_frente":"FS-01","tipo":"Equipo fuera de servicio","severidad":"Alta","descripcion":"Camión arenero ARE-019 fuera de servicio","id_insumo":"ARENA","id_equipo":"ARE-019","id_ruta":null,"valor_actual":null,"umbral":null,"estado":"Activa","creada_en":"2026-09-23T03:58:43.084002+00:00","resuelta_en":null,"frente":"Set de fractura 1 · Loma Alta","orden":2},{"id_alerta":1,"id_frente":"BASE-ANE","tipo":"Stock bajo","severidad":"Alta","descripcion":"Arena de fractura por debajo del mínimo en Base logística Añelo","id_insumo":"ARENA","id_equipo":null,"id_ruta":null,"valor_actual":11200.0,"umbral":12000.0,"estado":"Activa","creada_en":"2026-09-23T03:58:43.084002+00:00","resuelta_en":null,"frente":"Base logística Añelo","orden":2},{"id_alerta":2,"id_frente":"FS-01","tipo":"Stock bajo","severidad":"Alta","descripcion":"Arena de fractura por debajo del mínimo en Set de fractura 1 · Loma Alta","id_insumo":"ARENA","id_equipo":null,"id_ruta":null,"valor_actual":3800.0,"umbral":4500.0,"estado":"Activa","creada_en":"2026-09-23T03:58:43.084002+00:00","resuelta_en":null,"frente":"Set de fractura 1 · Loma Alta","orden":2},{"id_alerta":8,"id_frente":"FS-01","tipo":"Clima","severidad":"Media","descripcion":"Pronóstico de ráfagas superiores a 70 km/h en Loma Alta por 24 h","id_insumo":null,"id_equipo":null,"id_ruta":null,"valor_actual":null,"umbral":null,"estado":"Activa","creada_en":"2026-09-23T03:58:43.084002+00:00","resuelta_en":null,"frente":"Set de fractura 1 · Loma Alta","orden":3}],"v_acciones_sugeridas":[{"prioridad":1,"urgencia":0.87,"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","accion":"Priorizar despacho de gasoil a Set de fractura 1 · Loma Alta: cubre 0.9 días (quiebre estimado 23/09)."},{"prioridad":1,"urgencia":0.88,"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","accion":"Desviar el tráfico de Camino principal Loma Alta por Variante picada norte (+33 km, +55 min por viaje)."},{"prioridad":1,"urgencia":1.57,"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","accion":"Priorizar despacho de arena de fractura a Set de fractura 1 · Loma Alta: cubre 1.6 días (quiebre estimado 24/09)."},{"prioridad":1,"urgencia":1.73,"id_frente":"CAMP-01","frente":"Campamento Loma Alta","accion":"Priorizar despacho de agua potable a Campamento Loma Alta: cubre 1.7 días (quiebre estimado 24/09)."},{"prioridad":1,"urgencia":1.74,"id_frente":"CAMP-01","frente":"Campamento Loma Alta","accion":"Desviar el tráfico de Acceso campamento Loma Alta por Variante picada norte (camp.) (+32 km, +55 min por viaje)."},{"prioridad":2,"urgencia":10.858,"id_frente":"FS-01","frente":"Set de fractura 1 · Loma Alta","accion":"Reforzar flota de arena de fractura para Set de fractura 1 · Loma Alta: la capacidad operativa cubre el 86% del consumo (344 t/día de déficit)."}],"v_consumo_diario":[{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-09","cantidad":5.8,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-09","cantidad":62.9,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-09","cantidad":8.9,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-09","cantidad":79.8,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-09","cantidad":2484.8,"etapas":8.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-09","cantidad":11006.6,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-09","cantidad":2108.7,"etapas":8.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-09","cantidad":47.2,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-09","cantidad":403.6,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-09","cantidad":42.0,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-09","cantidad":10071.7,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-09","cantidad":63.2,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-09","cantidad":22.1,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-10","cantidad":84.2,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-10","cantidad":23.6,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-10","cantidad":39.4,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-10","cantidad":9450.9,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-10","cantidad":2103.2,"etapas":8.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-10","cantidad":10308.2,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-10","cantidad":44.3,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-10","cantidad":5.8,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-10","cantidad":2478.6,"etapas":9.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-10","cantidad":67.2,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-10","cantidad":409.2,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-10","cantidad":9.4,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-10","cantidad":59.1,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-11","cantidad":2311.9,"etapas":10.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-11","cantidad":80.6,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-11","cantidad":9988.6,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-11","cantidad":9166.8,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-11","cantidad":24.0,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-11","cantidad":57.3,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-11","cantidad":9.0,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-11","cantidad":6.3,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-11","cantidad":38.2,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-11","cantidad":439.2,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-11","cantidad":43.0,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-11","cantidad":1955.0,"etapas":8.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-11","cantidad":63.9,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-12","cantidad":60.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-12","cantidad":41.1,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-12","cantidad":8.6,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-12","cantidad":10769.4,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-12","cantidad":2361.0,"etapas":9.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-12","cantidad":22.4,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-12","cantidad":77.1,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-12","cantidad":61.6,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-12","cantidad":6.1,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-12","cantidad":9860.8,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-12","cantidad":425.9,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-12","cantidad":46.2,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-12","cantidad":1998.7,"etapas":8.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-13","cantidad":81.6,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-13","cantidad":62.3,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-13","cantidad":9966.0,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-13","cantidad":64.9,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-13","cantidad":9.1,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-13","cantidad":10887.8,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-13","cantidad":399.3,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-13","cantidad":2135.6,"etapas":8.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-13","cantidad":2515.1,"etapas":9.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-13","cantidad":22.4,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-13","cantidad":5.7,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-13","cantidad":41.5,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-13","cantidad":46.7,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-14","cantidad":38.5,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-14","cantidad":84.0,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-14","cantidad":9.4,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-14","cantidad":43.3,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-14","cantidad":57.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-14","cantidad":2056.6,"etapas":8.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-14","cantidad":2426.2,"etapas":9.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-14","cantidad":66.9,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-14","cantidad":10076.5,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-14","cantidad":9244.9,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-14","cantidad":24.0,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-14","cantidad":419.5,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-14","cantidad":6.0,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-15","cantidad":58.3,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-15","cantidad":10167.2,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-15","cantidad":2295.1,"etapas":9.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-15","cantidad":78.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-15","cantidad":38.9,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-15","cantidad":43.7,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-15","cantidad":23.6,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-15","cantidad":62.4,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-15","cantidad":9325.5,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-15","cantidad":8.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-15","cantidad":1940.1,"etapas":8.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-15","cantidad":6.3,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-15","cantidad":440.9,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-16","cantidad":2417.7,"etapas":10.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-16","cantidad":2049.1,"etapas":8.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-16","cantidad":415.2,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-16","cantidad":22.1,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-16","cantidad":8.6,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-16","cantidad":77.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-16","cantidad":41.8,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-16","cantidad":47.0,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-16","cantidad":5.9,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-16","cantidad":10025.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-16","cantidad":61.5,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-16","cantidad":10955.1,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-16","cantidad":62.7,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-17","cantidad":22.9,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-17","cantidad":2517.3,"etapas":9.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-17","cantidad":10661.4,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-17","cantidad":61.0,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-17","cantidad":83.2,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-17","cantidad":5.7,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-17","cantidad":45.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-17","cantidad":40.7,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-17","cantidad":2137.6,"etapas":8.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-17","cantidad":9764.8,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-17","cantidad":9.3,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-17","cantidad":400.4,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-17","cantidad":66.3,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-18","cantidad":9.3,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-18","cantidad":9949.2,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-18","cantidad":429.9,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-18","cantidad":24.1,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-18","cantidad":65.9,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-18","cantidad":42.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-18","cantidad":2005.8,"etapas":8.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-18","cantidad":82.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-18","cantidad":9131.7,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-18","cantidad":38.0,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-18","cantidad":2369.0,"etapas":9.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-18","cantidad":6.1,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-18","cantidad":57.1,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-19","cantidad":437.1,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-19","cantidad":6.2,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-19","cantidad":9555.9,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-19","cantidad":59.7,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-19","cantidad":44.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-19","cantidad":1951.2,"etapas":8.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-19","cantidad":10426.4,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-19","cantidad":77.5,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-19","cantidad":39.8,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-19","cantidad":23.0,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-19","cantidad":2307.6,"etapas":9.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-19","cantidad":61.2,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-19","cantidad":8.6,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-20","cantidad":2097.1,"etapas":8.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-20","cantidad":405.7,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-20","cantidad":10079.7,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-20","cantidad":8.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-20","cantidad":62.8,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-20","cantidad":11015.6,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-20","cantidad":47.2,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-20","cantidad":79.3,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-20","cantidad":2471.8,"etapas":9.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-20","cantidad":5.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-20","cantidad":42.0,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-20","cantidad":63.0,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-20","cantidad":22.1,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-21","cantidad":10386.6,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-21","cantidad":5.8,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-21","cantidad":59.5,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-21","cantidad":2490.8,"etapas":10.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-21","cantidad":84.1,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-21","cantidad":23.4,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-21","cantidad":67.1,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-21","cantidad":2114.0,"etapas":8.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-21","cantidad":9520.5,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-21","cantidad":39.7,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-21","cantidad":9.4,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-21","cantidad":406.6,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-21","cantidad":44.6,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"ARENA","fecha":"2026-09-22","cantidad":1963.8,"etapas":8.0},{"id_frente":"FS-01","id_insumo":"ARENA","fecha":"2026-09-22","cantidad":2321.8,"etapas":9.0},{"id_frente":"FS-02","id_insumo":"QUIM","fecha":"2026-09-22","cantidad":38.1,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"AGUA","fecha":"2026-09-22","cantidad":9959.4,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"VIANDA","fecha":"2026-09-22","cantidad":437.8,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"AGUA","fecha":"2026-09-22","cantidad":9140.8,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"AGUAP","fecha":"2026-09-22","cantidad":24.1,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"GASOIL","fecha":"2026-09-22","cantidad":9.1,"etapas":0.0},{"id_frente":"CAMP-01","id_insumo":"GASOIL","fecha":"2026-09-22","cantidad":6.3,"etapas":0.0},{"id_frente":"FS-02","id_insumo":"GASOIL","fecha":"2026-09-22","cantidad":64.4,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"GASOIL","fecha":"2026-09-22","cantidad":81.1,"etapas":0.0},{"id_frente":"PE-01","id_insumo":"AGUA","fecha":"2026-09-22","cantidad":57.1,"etapas":0.0},{"id_frente":"FS-01","id_insumo":"QUIM","fecha":"2026-09-22","cantidad":42.8,"etapas":0.0}],"flota":[{"id_equipo":"AQ-01","id_frente":"FS-01","tipo":"Bombeo de acueducto","id_insumo":"AGUA","capacidad":11000.0,"viajes_dia_max":1.0,"estado":"Operativo"},{"id_equipo":"AQ-02","id_frente":"FS-02","tipo":"Bombeo de acueducto","id_insumo":"AGUA","capacidad":10000.0,"viajes_dia_max":1.0,"estado":"Operativo"},{"id_equipo":"ARE-001","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-002","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-003","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-004","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-005","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-006","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-007","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Fuera de servicio"},{"id_equipo":"ARE-008","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-009","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-010","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-011","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-012","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-013","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-014","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-015","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-016","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-017","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-018","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-019","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Fuera de servicio"},{"id_equipo":"ARE-020","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-021","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-022","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-023","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Mantenimiento correctivo"},{"id_equipo":"ARE-024","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-025","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-026","id_frente":"FS-01","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.0,"estado":"Operativo"},{"id_equipo":"ARE-027","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-028","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-029","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-030","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-031","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-032","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-033","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-034","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-035","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-036","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-037","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-038","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-039","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-040","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-041","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Mantenimiento preventivo"},{"id_equipo":"ARE-042","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-043","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-044","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-045","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-046","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-047","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-048","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-049","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"ARE-050","id_frente":"FS-02","tipo":"Camión arenero","id_insumo":"ARENA","capacidad":30.0,"viajes_dia_max":3.2,"estado":"Operativo"},{"id_equipo":"BOM-001","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-002","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-003","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-004","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-005","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Mantenimiento correctivo"},{"id_equipo":"BOM-006","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-007","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-008","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-009","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-010","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-011","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-012","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-013","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-014","id_frente":"FS-01","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-015","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-016","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-017","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-018","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-019","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-020","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-021","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-022","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-023","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-024","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-025","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"BOM-026","id_frente":"FS-02","tipo":"Bomba de fractura","id_insumo":null,"capacidad":null,"viajes_dia_max":null,"estado":"Operativo"},{"id_equipo":"CAG-001","id_frente":"PE-01","tipo":"Cisterna de agua","id_insumo":"AGUA","capacidad":30.0,"viajes_dia_max":2.0,"estado":"Operativo"},{"id_equipo":"CAP-001","id_frente":"CAMP-01","tipo":"Cisterna de agua potable","id_insumo":"AGUAP","capacidad":15.0,"viajes_dia_max":2.0,"estado":"Operativo"},{"id_equipo":"CGO-001","id_frente":"FS-01","tipo":"Cisterna de gasoil","id_insumo":"GASOIL","capacidad":30.0,"viajes_dia_max":1.5,"estado":"Operativo"},{"id_equipo":"CGO-002","id_frente":"FS-01","tipo":"Cisterna de gasoil","id_insumo":"GASOIL","capacidad":30.0,"viajes_dia_max":1.5,"estado":"Mantenimiento preventivo"},{"id_equipo":"CGO-003","id_frente":"FS-01","tipo":"Cisterna de gasoil","id_insumo":"GASOIL","capacidad":30.0,"viajes_dia_max":1.5,"estado":"Operativo"},{"id_equipo":"CGO-004","id_frente":"FS-02","tipo":"Cisterna de gasoil","id_insumo":"GASOIL","capacidad":30.0,"viajes_dia_max":1.6,"estado":"Operativo"},{"id_equipo":"CGO-005","id_frente":"FS-02","tipo":"Cisterna de gasoil","id_insumo":"GASOIL","capacidad":30.0,"viajes_dia_max":1.6,"estado":"Operativo"},{"id_equipo":"CGO-006","id_frente":"PE-01","tipo":"Cisterna de gasoil","id_insumo":"GASOIL","capacidad":20.0,"viajes_dia_max":1.0,"estado":"Operativo"},{"id_equipo":"CGO-007","id_frente":"CAMP-01","tipo":"Cisterna de gasoil","id_insumo":"GASOIL","capacidad":10.0,"viajes_dia_max":1.0,"estado":"Operativo"},{"id_equipo":"CVI-001","id_frente":"CAMP-01","tipo":"Camión de viandas","id_insumo":"VIANDA","capacidad":500.0,"viajes_dia_max":1.0,"estado":"Operativo"},{"id_equipo":"CVI-002","id_frente":"CAMP-01","tipo":"Camión de viandas","id_insumo":"VIANDA","capacidad":500.0,"viajes_dia_max":1.0,"estado":"Operativo"},{"id_equipo":"QUI-001","id_frente":"FS-01","tipo":"Camión de químicos","id_insumo":"QUIM","capacidad":25.0,"viajes_dia_max":2.0,"estado":"Operativo"},{"id_equipo":"QUI-002","id_frente":"FS-02","tipo":"Camión de químicos","id_insumo":"QUIM","capacidad":25.0,"viajes_dia_max":2.0,"estado":"Operativo"}],"v_viajes_recientes":[{"id_viaje":1175,"id_ruta":"R-02","id_equipo":"ARE-031","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-23T02:58:43.084002+00:00","llegada_plan":"2026-09-23T04:33:43.084002+00:00","llegada_real":null,"estado":"En tránsito","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":1170,"id_ruta":"R-01B","id_equipo":"CGO-001","id_insumo":"GASOIL","cantidad":30.0,"salida":"2026-09-23T01:58:43.084002+00:00","llegada_plan":"2026-09-23T05:23:43.084002+00:00","llegada_real":null,"estado":"En tránsito","ruta":"Variante picada norte","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":1171,"id_ruta":"R-01B","id_equipo":"ARE-002","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-23T00:58:43.084002+00:00","llegada_plan":"2026-09-23T04:23:43.084002+00:00","llegada_real":null,"estado":"En tránsito","ruta":"Variante picada norte","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":1172,"id_ruta":"R-01B","id_equipo":"ARE-004","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T23:58:43.084002+00:00","llegada_plan":"2026-09-23T03:23:43.084002+00:00","llegada_real":null,"estado":"Demorado","ruta":"Variante picada norte","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":1174,"id_ruta":"R-01","id_equipo":"CGO-003","id_insumo":"GASOIL","cantidad":30.0,"salida":"2026-09-22T22:58:43.084002+00:00","llegada_plan":"2026-09-23T01:28:43.084002+00:00","llegada_real":null,"estado":"Cancelado","ruta":"Camino principal Loma Alta","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":1173,"id_ruta":"R-01","id_equipo":"ARE-009","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T22:58:43.084002+00:00","llegada_plan":"2026-09-23T01:28:43.084002+00:00","llegada_real":null,"estado":"Cancelado","ruta":"Camino principal Loma Alta","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":63,"id_ruta":"R-01","id_equipo":"ARE-024","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T21:30:00+00:00","llegada_real":"2026-09-22T21:25:00+00:00","estado":"Entregado","ruta":"Camino principal Loma Alta","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":108,"id_ruta":"R-02","id_equipo":"ARE-039","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T20:35:00+00:00","llegada_real":"2026-09-22T20:55:00+00:00","estado":"Entregado","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":9,"id_ruta":"R-01","id_equipo":"ARE-003","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T21:30:00+00:00","llegada_real":"2026-09-22T22:25:00+00:00","estado":"Entregado","ruta":"Camino principal Loma Alta","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":66,"id_ruta":"R-01","id_equipo":"ARE-025","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T21:30:00+00:00","llegada_real":"2026-09-22T21:25:00+00:00","estado":"Entregado","ruta":"Camino principal Loma Alta","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":105,"id_ruta":"R-02","id_equipo":"ARE-038","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T20:35:00+00:00","llegada_real":"2026-09-22T21:30:00+00:00","estado":"Entregado","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":24,"id_ruta":"R-01","id_equipo":"ARE-009","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T21:30:00+00:00","llegada_real":"2026-09-22T21:25:00+00:00","estado":"Entregado","ruta":"Camino principal Loma Alta","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":69,"id_ruta":"R-01","id_equipo":"ARE-026","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T21:30:00+00:00","llegada_real":"2026-09-22T21:50:00+00:00","estado":"Entregado","ruta":"Camino principal Loma Alta","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":102,"id_ruta":"R-02","id_equipo":"ARE-037","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T20:35:00+00:00","llegada_real":"2026-09-22T20:30:00+00:00","estado":"Entregado","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":163,"id_ruta":"R-01","id_equipo":"ARE-023","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T21:30:00+00:00","llegada_real":"2026-09-22T22:25:00+00:00","estado":"Entregado","ruta":"Camino principal Loma Alta","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":72,"id_ruta":"R-02","id_equipo":"ARE-027","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T20:35:00+00:00","llegada_real":"2026-09-22T20:30:00+00:00","estado":"Entregado","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":99,"id_ruta":"R-02","id_equipo":"ARE-036","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T20:35:00+00:00","llegada_real":"2026-09-22T20:30:00+00:00","estado":"Entregado","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":75,"id_ruta":"R-02","id_equipo":"ARE-028","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T20:35:00+00:00","llegada_real":"2026-09-22T21:30:00+00:00","estado":"Entregado","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":96,"id_ruta":"R-02","id_equipo":"ARE-035","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T20:35:00+00:00","llegada_real":"2026-09-22T20:55:00+00:00","estado":"Entregado","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":27,"id_ruta":"R-01","id_equipo":"ARE-010","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T21:30:00+00:00","llegada_real":"2026-09-22T21:50:00+00:00","estado":"Entregado","ruta":"Camino principal Loma Alta","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":78,"id_ruta":"R-02","id_equipo":"ARE-029","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T20:35:00+00:00","llegada_real":"2026-09-22T20:55:00+00:00","estado":"Entregado","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":93,"id_ruta":"R-02","id_equipo":"ARE-034","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T20:35:00+00:00","llegada_real":"2026-09-22T20:30:00+00:00","estado":"Entregado","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":160,"id_ruta":"R-01","id_equipo":"ARE-019","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T21:30:00+00:00","llegada_real":"2026-09-22T21:25:00+00:00","estado":"Entregado","ruta":"Camino principal Loma Alta","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"},{"id_viaje":81,"id_ruta":"R-02","id_equipo":"ARE-030","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T20:35:00+00:00","llegada_real":"2026-09-22T20:30:00+00:00","estado":"Entregado","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":90,"id_ruta":"R-02","id_equipo":"ARE-033","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T20:35:00+00:00","llegada_real":"2026-09-22T21:30:00+00:00","estado":"Entregado","ruta":"Ruta asfaltada Cerro Negro","destino":"FS-02","frente_destino":"Set de fractura 2 · Cerro Negro"},{"id_viaje":3,"id_ruta":"R-01","id_equipo":"ARE-001","id_insumo":"ARENA","cantidad":30.0,"salida":"2026-09-22T19:00:00+00:00","llegada_plan":"2026-09-22T21:30:00+00:00","llegada_real":"2026-09-22T21:50:00+00:00","estado":"Entregado","ruta":"Camino principal Loma Alta","destino":"FS-01","frente_destino":"Set de fractura 1 · Loma Alta"}],"generado_en":"2026-09-23 03:58:43.494787+00"};
+
+const DIA = 86400000;
+const LS_KEY = 'sosten_fuente_v1';
+let D = null;            // datos en uso (mismas claves que las vistas SQL)
+let FUENTE = {modo:'demo', url:'', key:''};
+let SEL = null;          // frente seleccionado
+let simChart = null;
+const SIM = {};          // estado del simulador por frente
+
+/* ---------- utilidades ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (n, d=0) => n==null || isNaN(n) ? '—' : Number(n).toLocaleString('es-AR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const SEM = {'Crítico':['--crit','p-crit'],'Bajo':['--low','p-low'],'Atención':['--watch','p-watch'],'Normal':['--ok','p-ok']};
+const semColor = s => css((SEM[s]||['--ink-3'])[0]);
+const semPill = s => `<span class="pill ${(SEM[s]||[0,'p-neutral'])[1]}">${esc(s)}</span>`;
+const SEVP = {'Crítica':'p-crit','Alta':'p-low','Media':'p-watch','Baja':'p-neutral'};
+const hoy0 = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
+const ddmm = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+const corto = n => String(n||'').replace('Set de fractura','Set').replace('Equipo de perforación','Perforación').replace(' · ',' ');
+const insCorto = {'Arena de fractura':'Arena','Agua de fractura':'Agua','Aditivos químicos':'Químicos','Agua potable':'Agua potable','Gasoil':'Gasoil','Viandas':'Viandas'};
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),3200); }
+function duracion(dias){
+  if(dias==null) return '—';
+  const h = dias*24;
+  if(h < 1) return 'menos de una hora';
+  if(h < 48) return `${Math.round(h)} horas`;
+  return `${fmt(dias,1)} días`;
+}
+
+/* ---------- el snapshot se corre al día de hoy ---------- */
+function rebase(snap){
+  const d = structuredClone(snap);
+  const gen = Date.parse(d.generado_en.replace(' ','T').replace(/\+00$/,'+00:00'));
+  const dMs = Date.now() - gen;
+  const dDias = Math.round(dMs/DIA);
+  const walk = o => {
+    for(const k in o){
+      const v=o[k];
+      if(v && typeof v==='object') walk(v);
+      else if(typeof v==='string'){
+        if(/^\d{4}-\d{2}-\d{2}$/.test(v)){
+          const [y,m,dd]=v.split('-').map(Number); const x=new Date(y,m-1,dd+dDias);
+          o[k]=`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+        } else if(/^\d{4}-\d{2}-\d{2}T/.test(v)){
+          o[k]=new Date(Date.parse(v)+dMs).toISOString();
+        }
+      }
+    }
+  };
+  walk(d);
+  d.v_acciones_sugeridas.forEach(a=>{
+    a.accion = a.accion.replace(/(\d{2})\/(\d{2})/g,(m,dd,mm)=>{
+      const x=new Date(new Date().getFullYear(),+mm-1,+dd+dDias); return ddmm(x);
+    });
+  });
+  d.generado_en = new Date().toISOString();
+  return d;
+}
+
+/* ---------- carga de datos ---------- */
+const VISTAS = ['frentes','v_autonomia','v_indice_sostenimiento','v_balance_reposicion','v_disponibilidad_flota',
+  'v_rutas_estado','v_viajes_kpi','v_alertas_activas','v_acciones_sugeridas','v_consumo_diario','flota','v_viajes_recientes'];
+
+async function cargar(){
+  try{
+    if(FUENTE.modo==='demo'){
+      if(!SNAPSHOT) throw new Error('este archivo no trae datos de demostración (generalo con build.py) ni tiene una fuente conectada');
+      D = rebase(SNAPSHOT);
+      $('srcLabel').textContent = 'Escenario de demostración';
+    } else if(FUENTE.modo==='api'){
+      const r = await fetch(FUENTE.url.replace(/\/$/,'') + '/api/tablero');
+      if(!r.ok) throw new Error(`La API respondió ${r.status}`);
+      D = await r.json();
+      $('srcLabel').textContent = 'API en vivo, ' + new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+    } else {
+      const base = FUENTE.url.replace(/\/$/,'') + '/rest/v1/';
+      const h = {apikey:FUENTE.key, Authorization:'Bearer '+FUENTE.key};
+      const desde = new Date(Date.now()-14*DIA).toISOString().slice(0,10);
+      const res = await Promise.all(VISTAS.map(v=>{
+        const q = v==='v_consumo_diario' ? `?select=*&fecha=gte.${desde}` : '?select=*';
+        return fetch(base+v+q,{headers:h}).then(r=>{ if(!r.ok) throw new Error(`Supabase respondió ${r.status} en ${v}`); return r.json(); });
+      }));
+      D = {}; VISTAS.forEach((v,i)=>D[v]=res[i]);
+      D.v_autonomia.sort((a,b)=>(a.dias_autonomia??1e9)-(b.dias_autonomia??1e9));
+      D.v_acciones_sugeridas.sort((a,b)=>(a.urgencia??99)-(b.urgencia??99));
+      D.v_alertas_activas.sort((a,b)=>a.orden-b.orden);
+      $('srcLabel').textContent = 'Supabase en vivo, ' + new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+    }
+    D.v_autonomia.forEach(r=>{ for(const k of ['cantidad_actual','consumo_real_dia','consumo_plan_dia','dias_autonomia','stock_objetivo','stock_minimo','umbral_critico']) if(r[k]!=null) r[k]=+r[k]; });
+    render();
+    return true;
+  }catch(e){
+    console.error(e);
+    if(!SNAPSHOT){
+      $('heroTitle').textContent = 'Sin datos para mostrar.';
+      $('heroSub').textContent = 'Conectá la API o Supabase desde Fuente de datos. Detalle: ' + e.message + '.';
+      $('srcLabel').textContent = 'Sin fuente';
+      return false;
+    }
+    FUENTE = {modo:'demo',url:'',key:''};
+    D = rebase(SNAPSHOT);
+    $('srcLabel').textContent = 'Escenario de demostración';
+    render();
+    toast('No se pudo conectar: ' + e.message + '. Se muestran los datos de demostración.');
+    return false;
+  }
+}
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+function render(){
+  const idx = D.v_indice_sostenimiento;
+  if(!SEL || !idx.find(f=>f.id_frente===SEL)){
+    const peor = [...idx].filter(f=>f.dias_autonomia_min!=null).sort((a,b)=>a.dias_autonomia_min-b.dias_autonomia_min)[0];
+    SEL = peor ? peor.id_frente : idx[0]?.id_frente;
+  }
+  renderHero(); renderRunway(); renderAcciones(); renderAlertas();
+  renderSimSelect(); renderSim(); renderRepo(); renderRutas(); renderFlota(); renderViajes(); llenarParte();
+}
+
+function renderHero(){
+  const aut = D.v_autonomia.filter(r=>r.dias_autonomia!=null).sort((a,b)=>a.dias_autonomia-b.dias_autonomia);
+  const peor = aut[0];
+  if(!peor){ $('heroTitle').textContent='Todos los frentes con cobertura normal.'; $('heroSub').textContent=''; return; }
+  $('heroTitle').textContent = `Sin reposición, ${corto(peor.frente)} se queda sin ${peor.insumo.toLowerCase()} en ${duracion(peor.dias_autonomia)}.`;
+  const enRiesgo = new Set(aut.filter(r=>r.dias_autonomia<2).map(r=>r.id_frente)).size;
+  const cerradas = D.v_rutas_estado.filter(r=>r.estado==='Cerrada');
+  const partes = [];
+  partes.push(enRiesgo===1 ? '1 frente tiene algún insumo por debajo de 2 días.' : `${enRiesgo} frentes tienen algún insumo por debajo de 2 días.`);
+  if(cerradas.length) partes.push(cerradas.map(r=>r.nombre).join(', ') + (cerradas.length>1?' cerradas.':' cerrado.'));
+  const fs = D.flota.filter(f=>f.estado==='Fuera de servicio').length;
+  if(fs) partes.push(`${fs} ${fs>1?'equipos':'equipo'} fuera de servicio.`);
+  $('heroSub').textContent = partes.join(' ');
+}
+
+/* ---------- pista de autonomía (SVG) ---------- */
+function renderRunway(){
+  const box = $('runway');
+  const W = Math.max(340, box.clientWidth || 900);
+  const narrow = W < 640;
+  const L = narrow ? 16 : 250, R = narrow ? 18 : 24, top = 34, rowH = narrow ? 84 : 56, maxD = 7;
+  const filas = [...D.v_indice_sostenimiento].sort((a,b)=>(a.dias_autonomia_min??99)-(b.dias_autonomia_min??99));
+  const H = top + filas.length*rowH + 8;
+  const x = d => L + (Math.min(d,maxD)/maxD)*(W-L-R);
+  const hoy = hoy0();
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Días de cobertura por frente">`;
+  const zonas = [[0,1,'--crit-bg'],[1,2,'--low-bg'],[2,3,'--watch-bg']];
+  zonas.forEach(([a,b,c])=> s+=`<rect x="${x(a)}" y="${top-6}" width="${x(b)-x(a)}" height="${H-top-2}" fill="${css(c)}" opacity=".7"/>`);
+  for(let d=0; d<=maxD; d++){
+    const lbl = d===0 ? 'Hoy' : ddmm(new Date(hoy.getTime()+d*DIA));
+    s+=`<line x1="${x(d)}" x2="${x(d)}" y1="${top-6}" y2="${H-6}" stroke="${css('--line')}" stroke-width="1"/>`;
+    if(narrow && d%2) continue;
+    s+=`<text x="${x(d)}" y="${top-14}" text-anchor="${d===maxD?'end':d===0&&narrow?'start':'middle'}" font-size="12" fill="${css('--ink-3')}">${lbl}</text>`;
+  }
+  filas.forEach((f,i)=>{
+    const y0 = top + i*rowH;
+    const yc = narrow ? y0 + 50 : y0 + rowH/2;
+    const items = D.v_autonomia.filter(r=>r.id_frente===f.id_frente);
+    s+=`<g class="rw-row ${f.id_frente===SEL?'sel':''}" data-f="${esc(f.id_frente)}" tabindex="0" role="button" aria-label="${esc(f.frente)}: ${f.dias_autonomia_min!=null?'mínimo '+fmt(f.dias_autonomia_min,1)+' días':'sin consumo propio'}">`;
+    s+= narrow ? `<rect class="rw-bg" x="0" y="${y0}" width="${W}" height="24" fill="transparent"/>`
+               : `<rect class="rw-bg" x="0" y="${y0}" width="${L-8}" height="${rowH}" fill="transparent"/>`;
+    if(narrow){
+      s+=`<text x="${L}" y="${y0+17}" font-size="13.5" font-weight="650" fill="${css('--ink')}">${esc(corto(f.frente))}<tspan font-weight="400" fill="${css('--ink-3')}" font-size="12">${f.dias_autonomia_min!=null?'  índice '+fmt(f.indice*100)+' %':''}</tspan></text>`;
+    } else {
+      s+=`<text x="16" y="${yc-3}" font-size="14.5" font-weight="650" fill="${css('--ink')}">${esc(corto(f.frente))}</text>`;
+      s+=`<text x="16" y="${yc+14}" font-size="12" fill="${css('--ink-3')}">${esc(f.tipo_frente)}${f.dias_autonomia_min!=null?', índice '+fmt(f.indice*100)+' %':''}</text>`;
+    }
+    s+=`<line x1="${L}" x2="${W-R}" y1="${yc}" y2="${yc}" stroke="${css('--line')}" stroke-width="1.5"/>`;
+    const conCons = items.filter(r=>r.dias_autonomia!=null).sort((a,b)=>a.dias_autonomia-b.dias_autonomia);
+    if(!conCons.length){
+      const peorBase = [...items].sort((a,b)=>a.pct_objetivo-b.pct_objetivo)[0];
+      const txt = peorBase ? `Stock de despacho: ${insCorto[peorBase.insumo]||peorBase.insumo} al ${fmt(peorBase.pct_objetivo)} % del objetivo` : '';
+      s+=`<text x="${L+6}" y="${yc-7}" font-size="12.5" fill="${css('--ink-2')}">${esc(txt)}</text>`;
+    }
+    const lanes = [-1e9,-1e9], gap = narrow ? 66 : 84;
+    conCons.forEach(r=>{
+      const cx = x(r.dias_autonomia), col = semColor(r.semaforo);
+      s+=`<circle cx="${cx}" cy="${yc}" r="6.5" fill="${col}" stroke="${css('--panel')}" stroke-width="2"><title>${esc(r.insumo)}: ${fmt(r.dias_autonomia,1)} días (${r.semaforo})</title></circle>`;
+      const l = lanes.findIndex(v=>cx - v >= gap);
+      if(l<0) return;
+      lanes[l] = cx;
+      const ly = l ? yc+20 : yc-11;
+      const anc = cx > W-R-44 ? 'end' : cx < L+30 ? 'start' : 'middle';
+      s+=`<text x="${cx}" y="${ly}" text-anchor="${anc}" font-size="12" fill="${css('--ink-2')}">${esc(insCorto[r.insumo]||r.insumo)} ${r.dias_autonomia>maxD?'7+':fmt(r.dias_autonomia,1)}</text>`;
+    });
+    s+=`</g>`;
+  });
+  s+=`</svg>`;
+  box.innerHTML = s + `<div class="rw-note">Cada punto es un insumo: días de cobertura sin reposición al ritmo de consumo de los últimos 7 días. Tocá un frente para abrirlo en el simulador.</div>`;
+  box.querySelectorAll('.rw-row').forEach(g=>{
+    const go = ()=>{ SEL=g.dataset.f; renderRunway(); renderSimSelect(); renderSim(); document.getElementById('simulador').scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}); };
+    g.addEventListener('click',go);
+    g.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); }});
+  });
+}
+
+function renderAcciones(){
+  const a = D.v_acciones_sugeridas;
+  $('acciones').innerHTML = a.length ? a.map((x,i)=>`<li><span class="num-badge">${i+1}</span><div>${esc(x.accion)}<div class="meta">${esc(corto(x.frente))}</div></div></li>`).join('')
+    : `<li class="empty">Sin acciones pendientes: todos los frentes cubren más de 2 días y la flota alcanza.</li>`;
+}
+function renderAlertas(){
+  const a = D.v_alertas_activas;
+  $('alertas').innerHTML = a.length ? a.map(x=>`<li><span class="pill ${SEVP[x.severidad]||'p-neutral'}">${esc(x.severidad)}</span><div>${esc(x.descripcion)}<div class="meta">${esc(x.tipo)}, ${new Date(x.creada_en).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div></div></li>`).join('')
+    : `<li class="empty">No hay alertas activas.</li>`;
+}
+
+/* =====================================================================
+   SIMULADOR
+   ===================================================================== */
+const escalaEtapas = {ARENA:1, AGUA:1, QUIM:1, GASOIL:0.35};   // fracción del consumo que escala con etapas
+
+function rutasDe(fid){
+  const rs = D.v_rutas_estado.filter(r=>r.destino===fid);
+  return {prin: rs.find(r=>r.es_principal), alt: rs.find(r=>!r.es_principal)};
+}
+function etapasBase(fid){
+  const dias = D.v_consumo_diario.filter(c=>c.id_frente===fid && c.id_insumo==='ARENA' && +c.etapas>0);
+  const ult = dias.sort((a,b)=>a.fecha<b.fecha?1:-1).slice(0,7);
+  return ult.length ? ult.reduce((s,c)=>s+ +c.etapas,0)/ult.length : null;
+}
+function estadoSim(fid){
+  if(SIM[fid]) return SIM[fid];
+  const f = D.frentes.find(x=>x.id_frente===fid);
+  const {prin, alt} = rutasDe(fid);
+  const are = D.flota.filter(x=>x.id_frente===fid && x.id_insumo==='ARENA');
+  const eb = etapasBase(fid);
+  SIM[fid] = {
+    etapas: eb!=null ? Math.round(eb) : null,
+    etapasRef: eb!=null ? Math.round(eb) : null,
+    etapasBase: eb,
+    camiones: are.filter(x=>x.estado==='Operativo').length,
+    camionesTotal: are.length,
+    ruta: prin && prin.estado==='Cerrada' && alt ? 'alt' : 'prin',
+    gasoil: 0, f
+  };
+  return SIM[fid];
+}
+
+function proyectar(fid){
+  const st = estadoSim(fid);
+  const {prin, alt} = rutasDe(fid);
+  const ruta = st.ruta==='alt' && alt ? alt : prin;
+  const rutaCerrada = ruta && ruta.estado==='Cerrada';
+  // la capacidad de la flota se calculó para la ruta principal
+  const fRuta = !ruta || !prin ? 1 : (rutaCerrada ? 0 : prin.tiempo_min / ruta.tiempo_min);
+  const filas = D.v_autonomia.filter(r=>r.id_frente===fid && (r.consumo_real_dia||r.consumo_plan_dia));
+  const horas = 120, paso = 2;
+  return filas.map(r=>{
+    const flotaIns = D.flota.filter(x=>x.id_frente===fid && x.id_insumo===r.id_insumo);
+    let cap = 0;
+    flotaIns.forEach(x=>{ if(x.estado==='Operativo') cap += +x.capacidad * +x.viajes_dia_max; });
+    if(r.id_insumo==='ARENA' && flotaIns.length){
+      const porCamion = +flotaIns[0].capacidad * +flotaIns[0].viajes_dia_max;
+      cap = st.camiones * porCamion;
+    }
+    const porRuta = !flotaIns.some(x=>x.tipo==='Bombeo de acueducto');   // el acueducto no depende del camino
+    const capEf = porRuta ? cap * fRuta : cap;
+    let dem = r.consumo_real_dia ?? r.consumo_plan_dia;
+    if(st.etapas!=null && st.etapasRef){
+      const k = escalaEtapas[r.id_insumo] ?? 0;
+      dem = dem * (1 - k + k * st.etapas / st.etapasRef);
+    }
+    const llegada = ruta ? ruta.tiempo_min/60 : 3;
+    const serie = []; let s = r.cantidad_actual, cero=null, minimo=null;
+    for(let h=0; h<=horas; h+=paso){
+      if(h>0) s += (capEf - dem) * paso/24;
+      if(r.id_insumo==='GASOIL' && st.gasoil>0 && h-paso < llegada && h >= llegada && !rutaCerrada) s += st.gasoil;
+      s = Math.max(0, s);
+      if(minimo==null && s <= r.stock_minimo && h>0) minimo=h;
+      if(cero==null && s <= 0.0001) cero=h;
+      serie.push({h, pct: 100*s/r.stock_minimo, s});
+    }
+    return {r, cap:capEf, dem, balance: capEf-dem, serie, cero, minimo, ruta, fRuta, rutaCerrada};
+  });
+}
+
+function renderSimSelect(){
+  const sel = $('simFrente');
+  const opts = D.v_indice_sostenimiento.filter(f=>f.dias_autonomia_min!=null);
+  sel.innerHTML = opts.map(f=>`<option value="${esc(f.id_frente)}" ${f.id_frente===SEL?'selected':''}>${esc(f.frente)}</option>`).join('');
+  if(!opts.find(f=>f.id_frente===SEL) && opts[0]){ SEL = opts[0].id_frente; sel.value = SEL; }
+}
+
+function renderSim(){
+  if(!SEL) return;
+  const st = estadoSim(SEL);
+  const {prin, alt} = rutasDe(SEL);
+  // controles
+  $('ctrlEtapas').hidden = st.etapas==null;
+  if(st.etapas!=null){
+    $('simEtapas').value = st.etapas; $('simEtapasV').textContent = st.etapas;
+    $('simEtapasH').textContent = `Promedio real de la última semana: ${fmt(st.etapasBase,1)}. Plan: ${fmt(st.f.etapas_plan_dia)}.`;
+  }
+  $('ctrlCamiones').hidden = !st.camionesTotal;
+  if(st.camionesTotal){
+    $('simCamiones').max = st.camionesTotal; $('simCamiones').value = st.camiones; $('simCamionesV').textContent = `${st.camiones} de ${st.camionesTotal}`;
+    const fuera = st.camionesTotal - D.flota.filter(x=>x.id_frente===SEL && x.id_insumo==='ARENA' && x.estado==='Operativo').length;
+    $('simCamionesH').textContent = fuera ? `Hoy hay ${fuera} fuera de servicio o en mantenimiento.` : 'Toda la flota asignada está operativa.';
+  }
+  $('ctrlRuta').hidden = !prin;
+  $('rutaPrin').setAttribute('aria-pressed', st.ruta==='prin'); $('rutaAlt').setAttribute('aria-pressed', st.ruta==='alt');
+  $('rutaAlt').disabled = !alt;
+  const rSel = st.ruta==='alt' && alt ? alt : prin;
+  $('simRutaH').textContent = rSel ? `${rSel.nombre}: ${fmt(rSel.distancia_km)} km, ${Math.round(rSel.tiempo_min/60*10)/10} h por tramo${rSel.estado==='Cerrada'?'. Está cerrada: no llega nada por este camino.':rSel.condicion!=='Normal'?'. Hoy: '+rSel.condicion.toLowerCase()+'.':'.'}` : '';
+  $('simGasoil').value = st.gasoil; $('simGasoilV').textContent = st.gasoil ? `${st.gasoil} m³` : 'ninguno';
+
+  const P = proyectar(SEL);
+  const f = D.frentes.find(x=>x.id_frente===SEL);
+  $('simTitle').textContent = f.nombre;
+  const primero = P.filter(p=>p.cero!=null).sort((a,b)=>a.cero-b.cero)[0];
+  const bajoMin = P.filter(p=>p.minimo!=null && p.cero==null);
+  let v;
+  if(primero) v = `Con esta configuración el frente se queda sin ${primero.r.insumo.toLowerCase()} en ${primero.cero<48?Math.round(primero.cero)+' horas':fmt(primero.cero/24,1)+' días'}.`;
+  else if(bajoMin.length) v = `Llega a los 5 días sin quiebres, pero ${bajoMin.map(p=>p.r.insumo.toLowerCase()).join(' y ')} ${bajoMin.length>1?'quedan':'queda'} por debajo del mínimo.`;
+  else v = 'Llega a los 5 días con todos los insumos por encima del mínimo.';
+  if(P[0] && P[0].rutaCerrada) v += ' La ruta elegida está cerrada.';
+  $('simVerdict').textContent = v;
+
+  // gráfico
+  const pal = {ARENA:css('--sand'), GASOIL:css('--crit'), AGUA:css('--petrol'), QUIM:css('--ink-3'), VIANDA:css('--ok'), AGUAP:css('--watch')};
+  const labels = P[0] ? P[0].serie.map(p=>p.h) : [];
+  const ds = P.map(p=>({label:insCorto[p.r.insumo]||p.r.insumo, data:p.serie.map(q=>+q.pct.toFixed(1)), borderColor:pal[p.r.id_insumo]||css('--ink-2'), backgroundColor:pal[p.r.id_insumo]||css('--ink-2'), borderWidth:2.2, pointRadius:0, tension:.15}));
+  const ref = {label:'Stock mínimo', data:labels.map(()=>100), borderColor:css('--ink-3'), borderDash:[5,4], borderWidth:1.2, pointRadius:0};
+  const tickCol = css('--ink-3'), gridCol = css('--line-soft');
+  const cfg = {type:'line', data:{labels, datasets:[...ds, ref]},
+    options:{responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:css('--ink-2'),boxWidth:14,boxHeight:3,font:{family:'Archivo'}}},
+        tooltip:{callbacks:{title:it=>`+${it[0].label} h`, label:c=>`${c.dataset.label}: ${c.parsed.y.toFixed(0)} % del mínimo`}}},
+      scales:{x:{ticks:{color:tickCol,autoSkip:false,maxRotation:0,callback:(v,i)=>{const h=labels[i]; return h%24===0? (h===0?'Ahora':'+'+h/24+' d'):null;}},grid:{color:(c)=>labels[c.index]%24===0?gridCol:'transparent'}},
+              y:{min:0, suggestedMax:250, ticks:{color:tickCol,callback:v=>v+' %'},grid:{color:gridCol},title:{display:true,text:'Stock como % del mínimo',color:tickCol}}}}};
+  if(simChart){ simChart.data = cfg.data; simChart.options = cfg.options; simChart.update(); }
+  else simChart = new Chart($('simChart'), cfg);
+
+  $('simTable').innerHTML = `<thead><tr><th>Insumo</th><th class="n">Consumo/día</th><th class="n">Reposición/día</th><th class="n">Balance/día</th><th class="n">Quiebre</th></tr></thead><tbody>` +
+    P.map(p=>`<tr><td>${esc(p.r.insumo)}</td><td class="n">${fmt(p.dem)} ${esc(p.r.unidad)}</td><td class="n">${fmt(p.cap)} ${esc(p.r.unidad)}</td>
+      <td class="n" style="color:${p.balance<0?'var(--crit)':'var(--ok)'};font-weight:600">${p.balance>=0?'+':''}${fmt(p.balance)}</td>
+      <td class="n">${p.cero!=null?(p.cero<48?Math.round(p.cero)+' h':fmt(p.cero/24,1)+' d'):'—'}</td></tr>`).join('') + '</tbody>';
+}
+
+function simSet(k,v){ estadoSim(SEL)[k]=v; renderSim(); }
+$('simFrente').addEventListener('change',e=>{ SEL=e.target.value; renderRunway(); renderSim(); });
+$('simEtapas').addEventListener('input',e=>simSet('etapas',+e.target.value));
+$('simCamiones').addEventListener('input',e=>simSet('camiones',+e.target.value));
+$('simGasoil').addEventListener('input',e=>simSet('gasoil',+e.target.value));
+$('rutaPrin').addEventListener('click',()=>simSet('ruta','prin'));
+$('rutaAlt').addEventListener('click',()=>simSet('ruta','alt'));
+
+/* =====================================================================
+   TABLAS Y MAPA
+   ===================================================================== */
+function renderRepo(){
+  const rows = [...D.v_balance_reposicion].sort((a,b)=>a.cobertura_pct-b.cobertura_pct);
+  $('tblRepo').innerHTML = `<thead><tr><th>Frente</th><th>Insumo</th><th class="n">Consumo/día</th><th class="n">Capacidad operativa/día</th><th>Cobertura</th><th class="n">Equipos no disponibles</th></tr></thead><tbody>` +
+    rows.map(r=>{
+      const c = +r.cobertura_pct, col = c<100?'var(--crit)':c<110?'var(--watch)':'var(--ok)';
+      return `<tr><td>${esc(corto(r.frente))}</td><td>${esc(r.insumo)}</td><td class="n">${fmt(r.demanda_dia)} ${esc(r.unidad)}</td><td class="n">${fmt(r.cap_operativa_dia)} ${esc(r.unidad)}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="bar" style="flex:1"><i style="width:${Math.min(100,c/2)}%;background:${col}"></i></div><b style="color:${col};min-width:3.5em;text-align:right">${fmt(c)} %</b></div></td>
+      <td class="n">${r.equipos_no_disp||'—'}</td></tr>`;}).join('') + '</tbody>';
+}
+
+function renderRutas(){
+  const nodos = D.frentes.filter(f=>f.lat!=null);
+  const W = 560, H = 420, pad = 60;
+  const lats = nodos.map(n=>+n.lat), lons = nodos.map(n=>+n.lon);
+  const minLa=Math.min(...lats), maxLa=Math.max(...lats), minLo=Math.min(...lons), maxLo=Math.max(...lons);
+  const k = Math.min((W-2*pad)/((maxLo-minLo)*Math.cos(38.4*Math.PI/180)), (H-2*pad)/(maxLa-minLa));
+  const P = n => [pad + (+n.lon-minLo)*Math.cos(38.4*Math.PI/180)*k + ((W-2*pad) - (maxLo-minLo)*Math.cos(38.4*Math.PI/180)*k)/2, H - pad - (+n.lat-minLa)*k];
+  const byId = Object.fromEntries(nodos.map(n=>[n.id_frente,n]));
+  const COND = {'Normal':'--ok','Circular con restricción':'--watch','Recomendar cierre':'--low','Cerrada':'--crit'};
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Esquema de rutas desde la base">`;
+  D.v_rutas_estado.forEach(r=>{
+    const a=byId[r.origen], b=byId[r.destino]; if(!a||!b) return;
+    const [x1,y1]=P(a), [x2,y2]=P(b);
+    const mx=(x1+x2)/2, my=(y1+y2)/2, dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy)||1;
+    const off = r.es_principal ? 0 : 46;
+    const cx = mx - dy/len*off, cy = my + dx/len*off;
+    const col = css(COND[r.condicion]||'--ink-3');
+    const dash = r.estado==='Cerrada' ? 'stroke-dasharray="7 6"' : (!r.es_principal ? 'stroke-dasharray="2 5" stroke-linecap="round"' : '');
+    s+=`<path d="M${x1},${y1} Q${cx},${cy} ${x2},${y2}" fill="none" stroke="${col}" stroke-width="${r.es_principal?3.2:2.6}" ${dash}><title>${esc(r.nombre)}: ${esc(r.condicion)}</title></path>`;
+    const tx = (x1+2*cx+x2)/4, ty=(y1+2*cy+y2)/4;
+    if(r.estado==='Cerrada') s+=`<g transform="translate(${tx},${ty})"><circle r="9" fill="${css('--panel')}" stroke="${col}" stroke-width="2"/><path d="M-4,-4L4,4M4,-4L-4,4" stroke="${col}" stroke-width="2"/></g>`;
+  });
+  nodos.forEach(n=>{
+    const [x,y]=P(n); const base = n.tipo==='Base logística';
+    const f = D.v_indice_sostenimiento.find(i=>i.id_frente===n.id_frente);
+    const col = base ? css('--ink') : semColor(D.v_autonomia.filter(a=>a.id_frente===n.id_frente && a.dias_autonomia!=null).sort((a,b)=>a.dias_autonomia-b.dias_autonomia)[0]?.semaforo);
+    s+= base ? `<rect x="${x-9}" y="${y-9}" width="18" height="18" fill="${col}"/>` : `<circle cx="${x}" cy="${y}" r="9" fill="${col}" stroke="${css('--panel')}" stroke-width="2.5"/>`;
+    const anchor = base ? 'end' : x > W*0.62 ? 'end' : 'start', dx = anchor==='end' ? -14 : 14;
+    const ly = base ? y+26 : y-2;
+    s+=`<text x="${x+dx}" y="${ly}" text-anchor="${anchor}" font-size="13" font-weight="650" fill="${css('--ink')}">${esc(corto(n.nombre))}</text>`;
+    s+=`<text x="${x+dx}" y="${ly+15}" text-anchor="${anchor}" font-size="11.5" fill="${css('--ink-3')}">${base?'Base de despacho':f&&f.dias_autonomia_min!=null?'Mínimo '+fmt(f.dias_autonomia_min,1)+' días':''}</text>`;
+  });
+  s+=`<text x="${W-12}" y="${H-12}" text-anchor="end" font-size="11" fill="${css('--ink-3')}">Esquema, no a escala de caminos</text></svg>`;
+  $('mapa').innerHTML = s;
+
+  $('tblRutas').innerHTML = `<thead><tr><th>Ruta</th><th class="n">km</th><th class="n">Viento</th><th class="n">Lluvia</th><th class="n">Riesgo</th><th>Condición</th></tr></thead><tbody>` +
+    D.v_rutas_estado.map(r=>{
+      const pc = {'Normal':'p-ok','Circular con restricción':'p-watch','Recomendar cierre':'p-low','Cerrada':'p-crit'}[r.condicion]||'p-neutral';
+      return `<tr><td>${esc(r.nombre)}<div class="meta">${esc(r.superficie)}${r.es_principal?'':', variante'}</div></td><td class="n">${fmt(r.distancia_km)}</td><td class="n">${fmt(r.viento_kmh)} km/h</td><td class="n">${fmt(r.lluvia_mm)} mm</td><td class="n">${r.riesgo_efectivo??'—'} / 5</td><td><span class="pill ${pc}">${esc(r.condicion)}</span></td></tr>`;}).join('') + '</tbody>';
+}
+
+function renderFlota(){
+  const rows = [...D.v_disponibilidad_flota].sort((a,b)=>a.disponibilidad_pct-b.disponibilidad_pct || a.id_frente.localeCompare(b.id_frente));
+  $('tblFlota').innerHTML = `<thead><tr><th>Frente</th><th>Tipo de equipo</th><th class="n">Total</th><th class="n">Operativos</th><th class="n">Mantenimiento</th><th class="n">Fuera de servicio</th><th>Disponibilidad</th></tr></thead><tbody>` +
+    rows.map(r=>{ const p=+r.disponibilidad_pct, col=p<85?'var(--crit)':p<95?'var(--watch)':'var(--ok)';
+      return `<tr><td>${esc(corto(r.frente))}</td><td>${esc(r.tipo)}</td><td class="n">${r.total}</td><td class="n">${r.operativos}</td><td class="n">${r.en_mantenimiento||'—'}</td><td class="n" style="${r.fuera_servicio?'color:var(--crit);font-weight:600':''}">${r.fuera_servicio||'—'}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="bar" style="flex:1"><i style="width:${p}%;background:${col}"></i></div><b style="min-width:3.5em;text-align:right">${fmt(p)} %</b></div></td></tr>`;}).join('') + '</tbody>';
+}
+
+function renderViajes(){
+  $('tblViajesKpi').innerHTML = `<thead><tr><th>Ruta</th><th class="n">Entregados</th><th class="n">A tiempo</th><th class="n">Demora media</th><th class="n">Cancelados</th></tr></thead><tbody>` +
+    D.v_viajes_kpi.map(r=>`<tr><td>${esc(r.ruta)}</td><td class="n">${fmt(r.entregados)}</td><td class="n">${r.a_tiempo_pct!=null?fmt(r.a_tiempo_pct)+' %':'—'}</td><td class="n">${r.demora_media_min!=null?fmt(r.demora_media_min)+' min':'—'}</td><td class="n">${r.cancelados||'—'}</td></tr>`).join('') + '</tbody>';
+  const vs = D.v_viajes_recientes.filter(v=>v.estado!=='Entregado').slice(0,12);
+  const EP = {'En tránsito':'p-ok','Demorado':'p-low','Cancelado':'p-crit','Programado':'p-neutral'};
+  const ahora = Date.now();
+  $('tblViajes').innerHTML = `<thead><tr><th>Equipo</th><th>Carga</th><th>Destino</th><th>Estado</th><th class="n">Llegada</th></tr></thead><tbody>` +
+    (vs.length ? vs.map(v=>{
+      const lp = Date.parse(v.llegada_plan), min = Math.round((lp-ahora)/60000);
+      const lleg = v.estado==='Cancelado' ? '—' : min>=0 ? `en ${min} min` : `${-min} min tarde`;
+      return `<tr><td>${esc(v.id_equipo)}</td><td>${fmt(v.cantidad)} ${v.id_insumo==='ARENA'?'t arena':'m³ '+esc(v.id_insumo.toLowerCase())}</td><td>${esc(corto(v.frente_destino||v.destino))}<div class="meta">${esc(v.ruta)}</div></td><td><span class="pill ${EP[v.estado]||'p-neutral'}">${esc(v.estado)}</span></td><td class="n">${lleg}</td></tr>`;}).join('')
+      : `<tr><td colspan="5" class="empty" style="padding:14px 12px">No hay viajes en curso.</td></tr>`) + '</tbody>';
+}
+
+/* =====================================================================
+   PARTE DE CONSUMO
+   ===================================================================== */
+function llenarParte(){
+  const fs = [...new Set(D.v_autonomia.filter(r=>r.consumo_plan_dia||r.consumo_real_dia).map(r=>r.id_frente))];
+  const sel = $('pFrente'); const prev = sel.value;
+  sel.innerHTML = fs.map(id=>`<option value="${esc(id)}">${esc(D.frentes.find(f=>f.id_frente===id)?.nombre||id)}</option>`).join('');
+  if(fs.includes(prev)) sel.value = prev; else if(fs.includes(SEL)) sel.value = SEL;
+  llenarInsumos();
+}
+function llenarInsumos(){
+  const rows = D.v_autonomia.filter(r=>r.id_frente===$('pFrente').value && (r.consumo_plan_dia||r.consumo_real_dia));
+  $('pInsumo').innerHTML = rows.map(r=>`<option value="${esc(r.id_insumo)}">${esc(r.insumo)} (stock ${fmt(r.cantidad_actual)} ${esc(r.unidad)})</option>`).join('');
+  unidadParte();
+}
+function unidadParte(){ const r=D.v_autonomia.find(x=>x.id_frente===$('pFrente').value && x.id_insumo===$('pInsumo').value); $('pUnidad').textContent = r?`(${r.unidad})`:''; }
+$('pFrente').addEventListener('change',llenarInsumos);
+$('pInsumo').addEventListener('change',unidadParte);
+$('btnParte').addEventListener('click',()=>{ $('pMsg').textContent=''; $('formParte').reset(); llenarParte(); $('dlgParte').showModal(); });
+$('pCancel').addEventListener('click',()=>$('dlgParte').close());
+
+function semaforoLocal(r){
+  const d = r.consumo_real_dia ? r.cantidad_actual/r.consumo_real_dia : null;
+  if(r.cantidad_actual<=r.umbral_critico || (d!=null && d<1)) return 'Crítico';
+  if(r.cantidad_actual<=r.stock_minimo || (d!=null && d<2)) return 'Bajo';
+  if(r.cantidad_actual<=r.stock_objetivo*.5 || (d!=null && d<3)) return 'Atención';
+  return 'Normal';
+}
+function aplicarParteLocal(fid, iid, cant){
+  const r = D.v_autonomia.find(x=>x.id_frente===fid && x.id_insumo===iid);
+  if(!r) throw new Error('El frente no tiene stock registrado de ese insumo');
+  if(cant > r.cantidad_actual) throw new Error(`El consumo supera el stock disponible (${fmt(r.cantidad_actual)} ${r.unidad})`);
+  const antes = r.cantidad_actual;
+  r.cantidad_actual = +(r.cantidad_actual - cant).toFixed(2);
+  r.dias_autonomia = r.consumo_real_dia ? +(r.cantidad_actual/r.consumo_real_dia).toFixed(2) : null;
+  r.pct_objetivo = +(100*r.cantidad_actual/r.stock_objetivo).toFixed(1);
+  r.semaforo = semaforoLocal(r);
+  if(r.dias_autonomia!=null){ const q=hoy0(); q.setDate(q.getDate()+Math.floor(r.dias_autonomia)); r.fecha_quiebre=q.toISOString().slice(0,10); }
+  // alertas por cruce de umbral (igual que el trigger)
+  const cruza = (u)=> antes>u && r.cantidad_actual<=u;
+  if(cruza(r.umbral_critico)) D.v_alertas_activas.unshift({severidad:'Crítica',tipo:'Stock crítico',orden:1,descripcion:`${r.insumo} por debajo del umbral crítico en ${r.frente}`,creada_en:new Date().toISOString()});
+  else if(cruza(r.stock_minimo)) D.v_alertas_activas.unshift({severidad:'Alta',tipo:'Stock bajo',orden:2,descripcion:`${r.insumo} por debajo del mínimo en ${r.frente}`,creada_en:new Date().toISOString()});
+  D.v_alertas_activas.sort((a,b)=>a.orden-b.orden);
+  // índice del frente
+  const items = D.v_autonomia.filter(x=>x.id_frente===fid);
+  const fi = D.v_indice_sostenimiento.find(x=>x.id_frente===fid);
+  fi.indice = items.reduce((s,x)=>s+Math.min(1,x.cantidad_actual/x.stock_objetivo),0)/items.length;
+  const ds = items.filter(x=>x.dias_autonomia!=null).sort((a,b)=>a.dias_autonomia-b.dias_autonomia);
+  fi.dias_autonomia_min = ds[0]?.dias_autonomia ?? null; fi.insumo_limitante = ds[0]?.insumo ?? null;
+  // acción de despacho prioritario
+  D.v_acciones_sugeridas = D.v_acciones_sugeridas.filter(a=>!(a.id_frente===fid && a.accion.startsWith('Priorizar despacho de '+r.insumo.toLowerCase())));
+  if(r.dias_autonomia!=null && r.dias_autonomia<2){
+    const q=hoy0(); q.setDate(q.getDate()+Math.floor(r.dias_autonomia));
+    D.v_acciones_sugeridas.unshift({prioridad:1,urgencia:r.dias_autonomia,id_frente:fid,frente:r.frente,accion:`Priorizar despacho de ${r.insumo.toLowerCase()} a ${r.frente}: cubre ${fmt(r.dias_autonomia,1)} días (quiebre estimado ${ddmm(q)}).`});
+  }
+  D.v_acciones_sugeridas.sort((a,b)=>(a.urgencia??99)-(b.urgencia??99));
+}
+
+$('formParte').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const fid=$('pFrente').value, iid=$('pInsumo').value, cant=+$('pCant').value, por=$('pPor').value||null;
+  if(!(cant>0)){ $('pMsg').textContent='Ingresá una cantidad mayor que cero.'; return; }
+  try{
+    if(FUENTE.modo==='demo'){
+      aplicarParteLocal(fid,iid,cant); delete SIM[fid]; render();
+    } else if(FUENTE.modo==='api'){
+      const r = await fetch(FUENTE.url.replace(/\/$/,'')+'/api/consumos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_frente:fid,id_insumo:iid,cantidad:cant,reportado_por:por})});
+      const j = await r.json(); if(!r.ok) throw new Error(j.detail||('Error '+r.status));
+      delete SIM[fid]; await cargar();
+    } else {
+      const r = await fetch(FUENTE.url.replace(/\/$/,'')+'/rest/v1/consumos',{method:'POST',headers:{apikey:FUENTE.key,Authorization:'Bearer '+FUENTE.key,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({id_frente:fid,id_insumo:iid,cantidad:cant,reportado_por:por})});
+      if(!r.ok){ const j=await r.json().catch(()=>({})); throw new Error(j.message||('Error '+r.status)); }
+      delete SIM[fid]; await cargar();
+    }
+    $('dlgParte').close();
+    const row = D.v_autonomia.find(x=>x.id_frente===fid && x.id_insumo===iid);
+    toast(`Parte registrado. ${row.insumo}: ${row.dias_autonomia!=null?fmt(row.dias_autonomia,1)+' días de cobertura':'stock '+fmt(row.cantidad_actual)}.`);
+  }catch(err){ $('pMsg').textContent = err.message; }
+});
+
+/* =====================================================================
+   FUENTE DE DATOS
+   ===================================================================== */
+function syncFuenteForm(){
+  const m = document.querySelector('input[name=modo]:checked').value;
+  $('fUrlL').hidden = m==='demo'; $('fKeyL').hidden = m!=='supabase';
+  $('fUrl').placeholder = m==='api' ? 'https://mi-api.onrender.com' : 'https://<proyecto>.supabase.co';
+}
+document.querySelectorAll('input[name=modo]').forEach(r=>r.addEventListener('change',syncFuenteForm));
+$('btnFuente').addEventListener('click',()=>{
+  document.querySelector(`input[name=modo][value=${FUENTE.modo}]`).checked = true;
+  $('fUrl').value = FUENTE.url; $('fKey').value = FUENTE.key; $('fMsg').textContent=''; syncFuenteForm(); $('dlgFuente').showModal();
+});
+$('fCancel').addEventListener('click',()=>$('dlgFuente').close());
+$('formFuente').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const modo = document.querySelector('input[name=modo]:checked').value;
+  const url = $('fUrl').value.trim(), key = $('fKey').value.trim();
+  if(modo!=='demo' && !/^https?:\/\//.test(url)){ $('fMsg').textContent='Ingresá la URL completa, con https://'; return; }
+  if(modo==='supabase' && !key){ $('fMsg').textContent='Falta la clave anon del proyecto.'; return; }
+  FUENTE = {modo,url,key}; Object.keys(SIM).forEach(k=>delete SIM[k]);
+  $('fOk').disabled = true;
+  const ok = await cargar();
+  $('fOk').disabled = false;
+  if(ok){ try{ localStorage.setItem(LS_KEY, JSON.stringify(FUENTE)); }catch(_){} $('dlgFuente').close(); toast(modo==='demo'?'Usando el escenario de demostración.':'Conectado.'); }
+  else { $('fMsg').textContent='No se pudo conectar. Revisá la URL, la clave y que el servidor permita CORS desde este sitio.'; FUENTE={modo:'demo',url:'',key:''}; }
+});
+
+/* ---------- arranque ---------- */
+try{ const f = JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(f && f.modo) FUENTE = f; }catch(_){}
+let rsz; addEventListener('resize',()=>{ clearTimeout(rsz); rsz=setTimeout(()=>D&&(renderRunway(),renderRutas()),150); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{ if(D){ simChart?.destroy(); simChart=null; render(); } });
+cargar();
+</script>
+</body>
+</html>
